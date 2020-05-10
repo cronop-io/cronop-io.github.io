@@ -38,11 +38,9 @@ stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamic
 
 Some interesting facts about the file are:
 1. It has `setuid` property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So, it can be used to escalate privileges.
-
 ```bash
     -rwsr-xr-x 1 root root 22612 Nov 24  2011 stack5
 ```
-
 2. The file is an `ELF 32-bit LSB executable, Intel 80386`. Elf is the file format, 32-bit is the word size, LSB means that least significant bytes first (Little endian) and Intel 80386 (x86) is the instruction set used.
 3. The file has symbols, as indicated by the `not stripped` attribute. This is particularly helpful as it is possible to see the original variables and function names during the debug/analysis process.
 4. The file uses shared libraries, as it is dynamically linked. It uses existing libraries in the system as part of its execution. This helps to identify standard functions used in the binary.
