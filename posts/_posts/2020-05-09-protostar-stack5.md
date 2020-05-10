@@ -2,9 +2,9 @@
 layout: post
 title: Protostar - Stack 5
 description: >
-  Walkthrough of a simple binary explotation
+  Walkthrough of a simple binary exploitation
 image: /assets/img/posts/protostar5.png
-categories: [BinaryExplotation, stack overflow]
+categories: [BinaryExploitation, stack overflow]
 ---
 # Protostar - Stack 5
 
