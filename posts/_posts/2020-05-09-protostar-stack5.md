@@ -42,7 +42,7 @@ Some interesting facts about the file are:
 3. The file has symbols, as indicated by the `not stripped` attribute. This is particularly helpful as it is possible to see the original variables and function names during the debug/analysis process.
 4. The file uses shared libraries, as it is dynamically linked. It uses existing libraries in the system as part of its execution. This helps to identify standard functions used in the binary.
 
-By checking the headers of the binary, it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim's machine):
+By checking the headers of the binary, it is possible to see that the stack is marked as executable. This is an indication that it is possible use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim's machine):
 ```bash
 $ readelf -l stack5
 ...
@@ -389,7 +389,7 @@ As the execution enters the `gets` function the program will (#3) push the base 
 
 As is seen in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are `main`'s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or `<main+21>:    leave `.
 
-Based on the stack representation, we have the following:
+The program stack at this point would look like this:
 
 ```
 +--------------------+ 0x00000000
@@ -590,9 +590,7 @@ End of assembler dump.
 
 ```
 
-In the previous figure it is observed that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack. 
-
-Input passed to the program will be updated to accommodate instructions, they will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:
+In the previous figure it is observed that the return pointer was overwritten successfully with the value provided (0x45454545). In the **Analyze File** section it was stated that this binary allows execution from stack as it has NX feature disabled. Taking advantage of this, input passed to the program will be updated to accommodate assembly instructions. They will be executed by redirecting `main`'s return pointer to that memory in the stack. This is illustrated in the following diagram:
 
 ```
                                +--------------------+ 0x00000000
@@ -687,7 +685,7 @@ Program received signal SIGTRAP, Trace/breakpoint trap.
 (gdb) 
 ```
 
-Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc ...). Therefore, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, the program will be executed from different paths or "environments" in the system. In the first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:
+Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc ...). Therefore, the content of the stack might change and the addresses that were calculated might be slightly different. As an example, the program will be executed from different paths or "environments" in the system. In the first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:
 
 **Environment 1**
 ```bash

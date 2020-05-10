@@ -4,7 +4,7 @@ title: About
 authors: [lobo, asher]
 ---
 
-Humans passionate about security, binary analysis and retro computing. Inspired by Julio Cortazar and Jean-Michel Basquiat.
+Humans passionate about security, hardware and software. Inspired by Julio Cortazar and Jean-Michel Basquiat.
 
 # Who are we?
 
@@ -16,4 +16,4 @@ Passionate software developer. Interested in security and hardware programming.
 
 ## Asher Davila <img src="../assets/img/asher.jpeg" class="avatar">
 
-Wannabe hardware hacker.
+Wannabe hacker. Passionate for binary analysis, binary exploitation, IoT security, hardware hacking and retro computing.
