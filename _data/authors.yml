@@ -2,7 +2,7 @@
 cronopio:
   name:              "Cronop.io"
   about:             |
-    Humans passionate about security, binary analysis and retro computing. Inspired by Julio Cortazar and Jean-Michel Basquiat.
+    Humans passionate about security, hardware and software. Inspired by Julio Cortazar and Jean-Michel Basquiat.
   picture:
     path:            assets/icons/icon.jpg
   social:
@@ -20,7 +20,7 @@ lobo:
 asher:
   name:              Asher Davila
   about:             |
-    Wannabe hardware hacker.
+    Wannabe hacker. Passionate for binary analysis, binary exploitation, IoT security, hardware hacking and retro computing.
   picture:           assets/img/asher.jpeg
   social:
     twitter:           asher_davila
