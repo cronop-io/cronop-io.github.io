@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" hreflang="en" /><updated>2020-05-10T11:51:12-07:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Cronop.io</title><subtitle>Naive, idealistic, unconventional and sensitive posts.
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" hreflang="en" /><updated>2020-05-10T11:59:04-07:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Cronop.io</title><subtitle>Naive, idealistic, unconventional and sensitive posts.
 </subtitle><entry><title type="html">Protostar - Stack 5</title><link href="http://localhost:4000/posts/binaryexploitation/stack%20overflow/2020-05-09-protostar-stack5/" rel="alternate" type="text/html" title="Protostar - Stack 5" /><published>2020-05-09T00:00:00-07:00</published><updated>2020-05-09T00:00:00-07:00</updated><id>http://localhost:4000/posts/binaryexploitation/stack%20overflow/protostar-stack5</id><content type="html" xml:base="http://localhost:4000/posts/binaryexploitation/stack%20overflow/2020-05-09-protostar-stack5/">&lt;h2 id=&quot;target-binary&quot;&gt;Target Binary&lt;/h2&gt;
 
 &lt;table&gt;
@@ -52,7 +52,7 @@ stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 &lt;span class=
 
 &lt;p&gt;Some interesting facts about the file are:&lt;/p&gt;
 &lt;ol&gt;
-  &lt;li&gt;It has &lt;code class=&quot;highlighter-rouge&quot;&gt;setuid&lt;/code&gt; property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So it can be used to escalate privileges.&lt;/li&gt;
+  &lt;li&gt;It has &lt;code class=&quot;highlighter-rouge&quot;&gt;setuid&lt;/code&gt; property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So, it can be used to escalate privileges.&lt;/li&gt;
 &lt;/ol&gt;
 
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &lt;span class=&quot;nt&quot;&gt;-rwsr-xr-x&lt;/span&gt; 1 root root 22612 Nov 24  2011 stack5
@@ -64,7 +64,7 @@ stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 &lt;span class=
   &lt;li&gt;The file uses shared libraries, as it is dynamically linked. It uses existing libraries in the system as part of its execution. This helps to identify standard functions used in the binary.&lt;/li&gt;
 &lt;/ol&gt;
 
-&lt;p&gt;By checking the headers of the binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim’s machine):&lt;/p&gt;
+&lt;p&gt;By checking the headers of the binary, it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim’s machine):&lt;/p&gt;
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;readelf &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; stack5
 ...
 Program Headers:
@@ -250,12 +250,12 @@ call   0x80482e8 &amp;lt;gets@plt&amp;gt;  &lt;span class=&quot;p&quot;&gt;;&lt;
 
 &lt;h3 id=&quot;identify-the-vulnerability&quot;&gt;Identify the vulnerability&lt;/h3&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; is an inherently unsafe function. &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; is supposed to read from stdin and copy the input into a buffer. The basic problem is that &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; doesn’t know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it.&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; is an inherently unsafe function. &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; is supposed to read from stdin and copy the input into a buffer. The basic problem is that &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; doesn’t know the length of the buffer, so it continues reading until it finds a newline or encounters EOF and may overflow the bounds of the buffer it was given to it.&lt;/p&gt;
 
 &lt;p&gt;From the disassembly it is possible to see that the buffer address being passed points to a section in the stack:&lt;/p&gt;
 
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sub    esp,0x50          &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Allocates 0x50 bytes from the stack
-lea    eax,[esp+0x10]    &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;Gives a pointer that is at offset 0x10 from the top of our stack
+lea    eax,[esp+0x10]    &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;Gives a pointer that is at offset 0x10 from the top of the stack
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 &lt;p&gt;&lt;em&gt;*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards. This is known through the architecture and system the binary is targeted towards.&lt;/em&gt;&lt;/p&gt;
 
@@ -292,7 +292,7 @@ lea    eax,[esp+0x10]    &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span
 &lt;strong&gt;Note&lt;/strong&gt; The current instruction pointer points to the next instruction to execute.&lt;/li&gt;
   &lt;li&gt;Jump to the address where the callee implementation is in memory.&lt;/li&gt;
   &lt;li&gt;Save the current base pointer (EBP) (which points to the top of the start stack frame of the caller).&lt;/li&gt;
-  &lt;li&gt;Store the current stack pointer (ESP) into the base pointer (EBP), since this is the start of the new stack frame.&lt;/li&gt;
+  &lt;li&gt;Store the current stack pointer (ESP) into the base pointer (EBP) since this is the start of the new stack frame.&lt;/li&gt;
   &lt;li&gt;Allocate the local variables’ memory.&lt;/li&gt;
 &lt;/ol&gt;
 
@@ -343,7 +343,7 @@ gs             0x33	51
 
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;As observed above the program is about to execute instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;&lt;/code&gt; the instruction pointer (EIP) also shows this as it has &lt;code class=&quot;highlighter-rouge&quot;&gt;0x80483d4&lt;/code&gt; as value. Proceding with the program execution, &lt;code class=&quot;highlighter-rouge&quot;&gt;si&lt;/code&gt; is used to step into &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function call.&lt;/p&gt;
+&lt;p&gt;As observed above the program is about to execute instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;&lt;/code&gt; the instruction pointer (EIP) also shows this as it has &lt;code class=&quot;highlighter-rouge&quot;&gt;0x80483d4&lt;/code&gt; as value. Proceeding with the program execution, &lt;code class=&quot;highlighter-rouge&quot;&gt;si&lt;/code&gt; is used to step into &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function call.&lt;/p&gt;
 
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; si
 0x080482e8 &lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;gets@plt &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
@@ -377,7 +377,7 @@ gs             0x33	51
 
 &lt;p&gt;By executing &lt;em&gt;call&lt;/em&gt;, the program did two things, (#1) it jumped into the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function as showed by the instruction pointer EIP and (#2) it pushed &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d9&lt;/code&gt; to the stack as well (which corresponds to &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d9 &amp;lt;main+21&amp;gt;:    leave &lt;/code&gt;).&lt;/p&gt;
 
-&lt;p&gt;Proceding with the execution:&lt;/p&gt;
+&lt;p&gt;Proceeding with the execution:&lt;/p&gt;
 
 &lt;p&gt;Since the program calls into a dynamic library there will be some additional steps happening (loading the library and doing a lookup of the actual address of &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt;), but finally the execution arrives into the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function which points to the&lt;code class=&quot;highlighter-rouge&quot;&gt;_IO_gets&lt;/code&gt; in the GLIBC_2.0 library:&lt;/p&gt;
 
@@ -402,7 +402,7 @@ Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt
 
 &lt;p&gt;As is seen in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;main+21&amp;gt;:    leave &lt;/code&gt;.&lt;/p&gt;
 
-&lt;p&gt;Based on our stack representation, we have the following:&lt;/p&gt;
+&lt;p&gt;Based on the stack representation, we have the following:&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;+--------------------+ 0x00000000
 |                    |
@@ -438,7 +438,7 @@ Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt
 
 &lt;p&gt;Based on the previous statements, it is possible to exploit &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; vulnerability to overwrite &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s return pointer and hijack the execution towards an address that is desired.&lt;/p&gt;
 
-&lt;p&gt;Based on the previous information, it is known that the buffer passed to &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; resides in 0xbffff750 + 0x10 (Based on &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s dissasemble):&lt;/p&gt;
+&lt;p&gt;Based on the previous information, it is known that the buffer passed to &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; resides in 0xbffff750 + 0x10 (Based on &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s disassemble):&lt;/p&gt;
 
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; si
 0x080483d1	10	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c
@@ -551,7 +551,7 @@ user@protostar:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&
 ����������������������������������������������������������������������������EEEE
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;&lt;em&gt;in.txt&lt;/em&gt; was used as input to our program in GDB:&lt;/p&gt;
+&lt;p&gt;&lt;em&gt;in.txt&lt;/em&gt; was used as input to the program in GDB:&lt;/p&gt;
 
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; b main
 Breakpoint 6 at 0x80483cd: file stack5/stack5.c, line 10.
@@ -596,7 +596,7 @@ End of assembler dump.
 
 &lt;p&gt;In the previous figure it is observed that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack.&lt;/p&gt;
 
-&lt;p&gt;Input passed to the program will be updated to accommodate instructions the will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:&lt;/p&gt;
+&lt;p&gt;Input passed to the program will be updated to accommodate instructions, they will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:&lt;/p&gt;
 
 &lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;                               +--------------------+ 0x00000000
                                |                    |
@@ -675,9 +675,9 @@ End of assembler dump.
 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s return pointer is overwritten to 0xbffff7b0, this means that when the &lt;code class=&quot;highlighter-rouge&quot;&gt;ret&lt;/code&gt; instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (&lt;code class=&quot;highlighter-rouge&quot;&gt;int3&lt;/code&gt;) instruction.&lt;/p&gt;
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s return pointer is overwritten to 0xbffff7b0, this means that when the &lt;code class=&quot;highlighter-rouge&quot;&gt;ret&lt;/code&gt; instruction is called the next instruction to be executed will be the one stored in that address. Which in this case it was overwritten with 0xCC (&lt;code class=&quot;highlighter-rouge&quot;&gt;int3&lt;/code&gt;) instruction.&lt;/p&gt;
 
-&lt;p&gt;By continuing execution in GDB, it is observed that the injected payload was executed and that the breakpoint trap was surfaced to GDB.&lt;/p&gt;
+&lt;p&gt;By continuing execution in GDB, it is observed that the injected payload was executed, and that the breakpoint trap was surfaced to GDB.&lt;/p&gt;
 
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; c
 Continuing.
@@ -687,7 +687,7 @@ Program received signal SIGTRAP, Trace/breakpoint trap.
 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
 &lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
 
-&lt;p&gt;Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc …). As a consequence, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, let’s run the program from different paths or “environments” in our system. In our first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:&lt;/p&gt;
+&lt;p&gt;Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc …). Therefore, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, the program will be executed from different paths or “environments” in the system. In the first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:&lt;/p&gt;
 
 &lt;p&gt;&lt;strong&gt;Environment 1&lt;/strong&gt;&lt;/p&gt;
 &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;pwd
