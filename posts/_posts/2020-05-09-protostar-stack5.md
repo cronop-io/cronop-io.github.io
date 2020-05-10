@@ -32,7 +32,7 @@ stack5: setuid ELF 32-bit LSB executable, Intel 80386, version 1 (SYSV), dynamic
 ```
 
 Some interesting facts about the file are:
-1. It has `setuid` property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So it can be used to escalate privileges.
+1. It has `setuid` property which indicates that the program is run with the privileges of the owner. In this case, owner is root. So, it can be used to escalate privileges.
 
 ```bash
     -rwsr-xr-x 1 root root 22612 Nov 24  2011 stack5
@@ -42,7 +42,7 @@ Some interesting facts about the file are:
 3. The file has symbols, as indicated by the `not stripped` attribute. This is particularly helpful as it is possible to see the original variables and function names during the debug/analysis process.
 4. The file uses shared libraries, as it is dynamically linked. It uses existing libraries in the system as part of its execution. This helps to identify standard functions used in the binary.
 
-By checking the headers of the binary it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim's machine):
+By checking the headers of the binary, it is possible to see that the stack is marked as executable. This is an indication that we could use the stack to store arbitrary code that can be executed directly if control flow of the binary is hijacked (Arbitrary code execution is commonly used to gain control of a victim's machine):
 ```bash
 $ readelf -l stack5
 ...
@@ -233,13 +233,13 @@ char *gets(char *str)
 
 ### Identify the vulnerability
 
-`gets` is an inherently unsafe function. `gets` is supposed to read from stdin and copy the input into a buffer. The basic problem is that `gets` doesn't know the length of the buffer, so it continues reading until it finds a newline or encounters EOF, and may overflow the bounds of the buffer it was given to it. 
+`gets` is an inherently unsafe function. `gets` is supposed to read from stdin and copy the input into a buffer. The basic problem is that `gets` doesn't know the length of the buffer, so it continues reading until it finds a newline or encounters EOF and may overflow the bounds of the buffer it was given to it. 
 
 From the disassembly it is possible to see that the buffer address being passed points to a section in the stack:
 
 ```bash
 sub    esp,0x50          ; Allocates 0x50 bytes from the stack
-lea    eax,[esp+0x10]    ; *Gives a pointer that is at offset 0x10 from the top of our stack
+lea    eax,[esp+0x10]    ; *Gives a pointer that is at offset 0x10 from the top of the stack
 ```
 <em>*The behavior of stack (growing up or growing down) depends on the application binary interface (ABI) and how the call stack is organized. In this case, the stack grows downwards. This is known through the architecture and system the binary is targeted towards.</em>
 
@@ -276,7 +276,7 @@ A stack frame gets created through the following steps:
 **Note** The current instruction pointer points to the next instruction to execute.
 2. Jump to the address where the callee implementation is in memory.
 3. Save the current base pointer (EBP) (which points to the top of the start stack frame of the caller).
-4. Store the current stack pointer (ESP) into the base pointer (EBP), since this is the start of the new stack frame.
+4. Store the current stack pointer (ESP) into the base pointer (EBP) since this is the start of the new stack frame.
 5. Allocate the local variables' memory.
 
 In this case #1 and #2 are depicted in a single instruction which is `call`. 
@@ -327,7 +327,7 @@ gs             0x33	51
 
 ```
 
-As observed above the program is about to execute instruction `0x080483d4 <main+16>:	call   0x80482e8 <gets@plt>` the instruction pointer (EIP) also shows this as it has `0x80483d4` as value. Proceding with the program execution, `si` is used to step into `gets` function call.
+As observed above the program is about to execute instruction `0x080483d4 <main+16>:	call   0x80482e8 <gets@plt>` the instruction pointer (EIP) also shows this as it has `0x80483d4` as value. Proceeding with the program execution, `si` is used to step into `gets` function call.
 
 ```bash
 (gdb) si
@@ -362,7 +362,7 @@ gs             0x33	51
 
 By executing *call*, the program did two things, (#1) it jumped into the `gets` function as showed by the instruction pointer EIP and (#2) it pushed `0x080483d9` to the stack as well (which corresponds to `0x080483d9 <main+21>:    leave `). 
 
-Proceding with the execution:
+Proceeding with the execution:
 
 Since the program calls into a dynamic library there will be some additional steps happening (loading the library and doing a lookup of the actual address of `gets`), but finally the execution arrives into the `gets` function which points to the`_IO_gets` in the GLIBC_2.0 library:
 
@@ -389,7 +389,7 @@ As the execution enters the `gets` function the program will (#3) push the base 
 
 As is seen in the printed stack above, the first 24 bytes are some allocated data used by gets, the next 4 bytes are `main`'s base pointer (0xbffff7a8) and the following 4 bytes are the return pointer (0x080483d9) or `<main+21>:    leave `.
 
-Based on our stack representation, we have the following:
+Based on the stack representation, we have the following:
 
 ```
 +--------------------+ 0x00000000
@@ -426,7 +426,7 @@ Based on our stack representation, we have the following:
 
 Based on the previous statements, it is possible to exploit `gets` vulnerability to overwrite `main`'s return pointer and hijack the execution towards an address that is desired. 
 
-Based on the previous information, it is known that the buffer passed to `gets` resides in 0xbffff750 + 0x10 (Based on `main`'s dissasemble):
+Based on the previous information, it is known that the buffer passed to `gets` resides in 0xbffff750 + 0x10 (Based on `main`'s disassemble):
 
 ```bash
 (gdb) si
@@ -545,7 +545,7 @@ user@protostar:~$ cat in.txt
 ����������������������������������������������������������������������������EEEE
 ```
 
-*in.txt* was used as input to our program in GDB:
+*in.txt* was used as input to the program in GDB:
 
 ```bash
 (gdb) b main
@@ -592,7 +592,7 @@ End of assembler dump.
 
 In the previous figure it is observed that the return pointer was overwritten successfully with the value we provided (0x45454545). In Analyze File section it was stated that this binary allows execution from stack as it has NX feature disabled. This means that it is possible to execute written from the stack. 
 
-Input passed to the program will be updated to accommodate instructions the will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:
+Input passed to the program will be updated to accommodate instructions, they will be executed by redirecting the return pointer to that memory in the stack. This is illustrated in the following diagram:
 
 ```
                                +--------------------+ 0x00000000
@@ -674,9 +674,9 @@ End of assembler dump.
 (gdb) 
 ```
 
-`main`'s return pointer is overwritten to 0xbffff7b0, this means that when the `ret` instruction is called the next instruction to be executed will be the one stored in that address. Which in this case was overwritten with 0xCC (`int3`) instruction.
+`main`'s return pointer is overwritten to 0xbffff7b0, this means that when the `ret` instruction is called the next instruction to be executed will be the one stored in that address. Which in this case it was overwritten with 0xCC (`int3`) instruction.
 
-By continuing execution in GDB, it is observed that the injected payload was executed and that the breakpoint trap was surfaced to GDB.
+By continuing execution in GDB, it is observed that the injected payload was executed, and that the breakpoint trap was surfaced to GDB.
 
 ```bash
 (gdb) c
@@ -687,7 +687,7 @@ Program received signal SIGTRAP, Trace/breakpoint trap.
 (gdb) 
 ```
 
-Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc ...). As a consequence, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, let's run the program from different paths or "environments" in our system. In our first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:
+Since some environmental variables of the system are pushed to the stack of an executing program, the content of the stack while analyzing the binary might be different from other execution runs (Eg. A different user runs the program, the program is run from a different path, the program is run from an ssh session vs local session, etc ...). Therefore, the content of the stack might change and the addresses that we calculated might be slightly different. As an example, the program will be executed from different paths or "environments" in the system. In the first environment the program was executed on the directory where the executable itself resides (/opt/protostar/bin) and the second environment was run from the home directory of the testing system (/home/user). Furthermore, the address where the environmental variables are in a different address as shown in the next examples:
 
 **Environment 1**
 ```bash
