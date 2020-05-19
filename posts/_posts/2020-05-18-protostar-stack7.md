@@ -3,7 +3,7 @@ layout: post
 title: Protostar - Stack 7
 description: >
   Walkthrough of a simple binary exploitation
-image: /assets/img/posts/protostar5.png
+image: /assets/img/posts/protostar7.png
 categories: [BinaryExploitation, stack overflow]
 ---
 # Protostar - Stack 7
