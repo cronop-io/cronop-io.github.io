@@ -318,3 +318,5 @@ compress_html:
 
 sass:
   style:               compressed
+
+highlighter: rouge
