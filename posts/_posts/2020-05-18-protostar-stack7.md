@@ -1,4 +1,4 @@
-`---
+---
 layout: post
 title: Protostar - Stack 7
 description: >
@@ -575,4 +575,4 @@ input path please: got path ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï
 whoami
 root
 ```
-**HAPPY HACKING :)**`
+**HAPPY HACKING :)**
