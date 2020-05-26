@@ -74,7 +74,7 @@ Then let's move to the main function using the seek (`s`) command:
 [0x000012c9]> 
 ```
 
-Notice how the address in the cursor changed from `0x000011e0` (program's entry point) to `0x000012c9` (program's main function).
+Notice how the address in the cursor changes from `0x000011e0` (program's entry point) to `0x000012c9` (program's main function).
 
 It is time to find the string `Not exactly...` to understand what causes the program to output it. The command `iz` can be used to purge the strings of the binary:
 
