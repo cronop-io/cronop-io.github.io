@@ -116,7 +116,7 @@ From this list it is possible to observe a couple of interesting potential vulne
 
 ### Analyze program flow
 
-Now that there is some idea on the symbols involved, the flow of the program will be analyzed. Radare2 is a disassembler tool that has great features for analyzing binaries (more information on this is covered in a previous [post](./2020-05-09-protostar-stack5.md). To start the analysis, the main function will be disassembled. 
+Now that there is some idea on the symbols involved, the flow of the program will be analyzed. Radare2 is a disassembler tool that has great features for analyzing binaries (more information on this is covered in a previous [post](./2020-05-09-protostar-stack5.md)). To start the analysis, the main function will be disassembled. 
 
 ```
 [0x08048400]> pdf @ main
