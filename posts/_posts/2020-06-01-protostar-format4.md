@@ -40,7 +40,7 @@ or by using SCP:
 scp user@<ip address>:/opt/protostar/bin/format4 ~/Downloads/format4
 ```
 
-Now that the binary was extracted from the remote VM, it is possible to analyze it with radare2. In order to dump the file information, the `iI` command can be used inside radare2. 
+Now that the binary was extracted from the remote VM, it is possible to analyze with radare2. In order to dump the file information, the `iI` command can be used inside radare2. 
 
 ```
 $ r2 format4 
@@ -79,7 +79,7 @@ subsys   linux
 va       true
 ```
 
-Some interesting characteristics of this binary are that symbols are present (stripped = false), the stack is not protected against execution (nx = false), code is not relocatable (pic = false) and there are no stack canaries (canary = false). All of these are common counter-measures against binary exploitation. For more information on these, and alternative options for extracting this information see [Protostar - stack5](./2020-05-09-protostar-stack5.md).
+Some interesting characteristics of this binary are that symbols are present (stripped = false), the stack is not protected against execution (nx = false), code is not relocatable (pic = false) and there are no stack canaries (canary = false). All of these are common counter-measures against binary exploitation. For more information on these, and alternative options for extracting see [Protostar - stack5](./2020-05-09-protostar-stack5.md).
 
 **NOTE:** For more information on `iI` output see this [page](https://dzhy.dev/2020/02/28/Understanding-rabin2-output/).
 
@@ -116,7 +116,7 @@ From this list it is possible to observe a couple of interesting potential vulne
 
 ### Analyze program flow
 
-Now that there is some idea on the symbols involved, the flow of the program will be analyzed. Radare2 is a decompiler tool has great features for analyzing a binary (more information on this is covered in a previous [post](./2020-05-09-protostar-stack5.md). To start the analysis, the main function will be disassembled. 
+Now that there is some idea on the symbols involved, the flow of the program will be analyzed. Radare2 is a disassembler tool that has great features for analyzing binaries (more information on this is covered in a previous [post](./2020-05-09-protostar-stack5.md). To start the analysis, the main function will be disassembled. 
 
 ```
 [0x08048400]> pdf @ main
