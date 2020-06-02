@@ -305,7 +305,7 @@ The format specifiers are making `printf` read from the stack. As shown before, 
 
 Using direct parameter access can simplify format string exploits. A direct parameter access specifier is denoted with the dollar sign `$` such as shown in the example below:
 
-```C
+```c
 printf("The 5th element is: %5$d and the 1st element is: %1$d", 100, 200, 300, 400, 500);
 /*
 * Result: 
@@ -742,4 +742,5 @@ root
 ```
 
 **NOTE:** `cat` was used to keep the stdin open for passing commands to our shell.
+
 **NOTE:** The original binary is now executable to take advantage of the `setuid` property and gain root access.
