@@ -19,7 +19,7 @@ image: /assets/img/posts/crackme-xbs.png
 
 | Name           | Description                                               |
 |----------------|-----------------------------------------------------------|
-| File           | XBS (https://crackmes.one/crackme/5e604d4333c5d4439bb2dd72) |
+| File           | XBS (https://crackmes.one/crackme/5ec0017533c5d449d91ae500) |
 | OS             | GNU/Linux                                            |
 | Format         | ELF 64-bit LSB executable                                 |
 | PIE            | Enabled                                                   |
