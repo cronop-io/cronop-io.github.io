@@ -90,22 +90,7 @@ There are different hardware configurations of Gameboy cartridges. Some of them 
 
 The implementation consists of a host-side API written in Powershell that communicates over a serial bus with an [Arduino Mega](###Hardware). The Arduino is given a bank and an address to read from, then after receiving this message, it will respond by reading 4 bytes from that location and sending it back to the host through the serial connection.
 
-```mermaid
-sequenceDiagram
-    participant Host
-    participant Arduino
-    participant Cartridge
-    Host->>Arduino: Read(Bank, Address)
-    Arduino->>Cartridge: SetBank(Bank)
-    Cartridge-->>Arduino: Ok
-
-    loop i = [0, 3]
-        Arduino->>Cartridge: ReadAddress(Address + i)
-        Cartridge-->>Arduino: Byte
-    end
-
-    Arduino-->>Host: DWORD
-```
+![](https://i.imgur.com/xOpiM9J.png)
 
 ### Memory access
 
@@ -249,7 +234,7 @@ void setup()
 
 Similarly from the host side, a connection needs to be established:
 
-```pwsh    
+```powershell    
 Function Open-GB($Com)
 {
     $global:port = new-Object System.IO.Ports.SerialPort $Com,115200,None,8,one
@@ -269,7 +254,7 @@ Now that the connection is set up, the sender and the receiver side will agree o
 
 The host will request an address:
 
-```pwsh
+```powershell
 Function Read-Address($Address)
 {
     $global:port.Write([BitConverter]::GetBytes([UInt32]$Address), 0, 4); 
@@ -325,7 +310,7 @@ void loop()
 
 Now that both sides are communicating. It is possible to validate the correctness by reading a known address and comparing the output. In the case of the Gameboy, each cartridge stores the Nintendo logo at a fixed address. By adding more logic it is possible to enable Powershell to read a bigger range of memory, that can be useful for validating our test case:
 
-```pwsh
+```powershell
 Function Read-Range($Start, $Length)
 {
     for ($i = $Start; $i -lt $Start + $Length; $i+=4)
@@ -342,7 +327,7 @@ Function Read-Range($Start, $Length)
 
 This function is used to read the section containing the Nintendo logo (at `0x104`):
 
-```pwsh
+```powershell
 Read-Range -Start 0x104 -Length 48
 CE ED 66 66  CC 0D 00 0B  03 73 00 83  00 0C 00 0D
 00 08 11 1F  88 89 00 0E  DC CC 6E E6  DD DD D9 99
@@ -417,7 +402,7 @@ As stated previously, there are various types of Gameboy cartridges, that posses
 
 As an example, the cartridge for Kirby's DreamLand will be dumped. As mentioned above, to properly read a cartridge it is required to know its capabilities. For this the addresses 0x147 and 0x148 will be queried:
 
-```pwsh
+```powershell
 (Read-Address -Address 0x147)[0]
 01
 (Read-Address -Address 0x148)[0]
@@ -428,7 +413,7 @@ From this information, it is possible to conclude that this cartridge is an MCB1
 
 To dump the complete cartridge additional logic was added to the Powershell scripts, which will traverse the different banks and request for the data.
 
-```pwsh
+```powershell
 
 Function Read-Rom($MemoryBankNumber)
 {
@@ -481,7 +466,7 @@ Function Read-Rom($MemoryBankNumber)
 
 By calling this function, the bytes can be stored in a variable to do validation, manipulation, or storing into a file (This might take some time as it only reads 4 bytes at a time):
 
-```pwsh
+```powershell
 $Bytes = Read-Rom -MemoryBankNumber 16
     Dumping ROM 
     Processing 
@@ -504,7 +489,7 @@ Moreover, a Gameboy Color ROM was extracted from its cartridge. For this example
 ![](https://i.imgur.com/4OQWDUW.jpg)
 
 After extracting the bank 0 and looking at the header of the ROM (`0x147-0x148`) it was possible to observe that this cartridge is an MBC5 (`0x19`) and it has 64 banks (`0x05`) 
-```pwsh
+```powershell
 $Bytes = Read-Rom -MemoryBankNumber 64
     Dumping ROM 
     Processing 
