@@ -79,8 +79,7 @@ From the perspective of the cartridge, some pins are floating and require a [pul
 
 The following schematic shows how these resistors were placed and the connections between the [Cartridge reader](###Hardware) and [Arduino Mega](###Hardware), please note that the pin labeling in the cartridge reader is incorrect.
 
-
-![](https://i.imgur.com/A3CzME2.png)
+![](https://i.imgur.com/y44LnSo.png)
 
 ## Software 
 
