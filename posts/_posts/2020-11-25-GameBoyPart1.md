@@ -474,7 +474,7 @@ $Bytes = Read-Rom -MemoryBankNumber 16
 Set-Content -Path "KirbyDreamland.gb" -Value $Bytes -Encoding Byte
 ```
 
-After extracting the content, a hex editor was used to review the content its content:
+After extracting the content, a hex editor was used to review its content:
 
 ![](https://i.imgur.com/4RsqPem.png)
 
